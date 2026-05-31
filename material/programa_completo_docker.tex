@@ -1,0 +1,1926 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{csquotes}
+\usetheme[showlogo,nosectionpage]{UU}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{amsmath, amsfonts}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{fontawesome5}
+\usepackage{multicol}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, decorations.pathreplacing}
+
+\graphicspath{{./}{images/}}
+
+\definecolor{dockerblue}{HTML}{2496ED}
+\definecolor{terminalblack}{HTML}{1E1E1E}
+\definecolor{codebg}{HTML}{F4F4F4}
+\definecolor{linkedinblue}{HTML}{0A66C2}
+
+\lstdefinelanguage{Dockerfile}{
+  keywords={FROM,RUN,COPY,WORKDIR,CMD,EXPOSE,ENV,ENTRYPOINT,ADD,ARG,VOLUME,USER,LABEL,HEALTHCHECK,STOPSIGNAL,SHELL,ONBUILD},
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]'
+}
+\lstdefinestyle{terminal}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\bfseries\color{OTIred},
+  stringstyle=\color{UUgreen},
+  commentstyle=\itshape\color{UUdarkgray},
+  numbers=none,
+  frame=single,
+  rulecolor=\color{UUmidgray},
+  xleftmargin=0.5em,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true
+}
+\lstset{
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+           {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {ü}{{\"u}}1 {Ü}{{\"U}}1
+}
+
+\newcommand{\MainHeaderSlide}[2]{%
+  \begingroup
+  \setbeamercolor{background canvas}{bg=white}
+  \begin{frame}[plain]
+    \vfill
+    \hspace*{0.9cm}%
+    \begin{minipage}{0.78\paperwidth}
+      {\color{UUblack}\rule{4cm}{1.3pt}}\\[14pt]
+      {\raggedright\color{UUblack}\fontsize{36}{42}\selectfont\rmfamily\bfseries #1\par}
+    \end{minipage}
+    \vfill
+  \end{frame}
+  \endgroup
+}
+
+\title[Docker desde Cero]{Docker desde Cero: Crea y Despliega Aplicaciones}
+\subtitle{Programa Completo — PIT 2026}
+\author[Anthony Gonzalo Quispe Cordova]{Instructor: \href{https://www.linkedin.com/in/anthony-gonzalo-quispe-cordova-a39274196}{\texorpdfstring{\color{linkedinblue}\faLinkedin\ Anthony Gonzalo Quispe Cordova}{Anthony Gonzalo Quispe Cordova}}}
+\institute[OTI]{Oficina de Tecnologías de la Información (OTI)}
+\date{9na Edición}
+
+\begin{document}
+
+% ============================================================
+% PORTADA
+% ============================================================
+\begin{frame}[plain]
+  \titlepage
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=center]
+      at ([xshift=-2.05cm,yshift=-0.25cm]current page.east)
+      {{\color{dockerblue}\fontsize{78}{84}\selectfont\faDocker}};
+  \end{tikzpicture}
+\end{frame}
+
+% ============================================================
+% ÍNDICE GENERAL
+% ============================================================
+\begin{frame}{Índice General del Programa}
+  \tiny
+  \setlength{\columnsep}{0.25cm}
+  \begin{multicols}{3}
+    \tableofcontents[hideallsubsections]
+  \end{multicols}
+\end{frame}
+
+% ============================================================
+% SESIÓN 1: CONTENEDORES DESDE CERO
+% ============================================================
+
+\begin{frame}{Objetivo de la sesión 1}
+  \footnotesize
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \begin{block}{Al terminar la sesión 1 podrás}
+      \begin{itemize}
+        \item Explicar el concepto de contenerización.
+        \item Explicar qué problema resuelve Docker.
+        \item Ubicar Docker frente a VM e hipervisores.
+        \item Identificar el flujo para instalar una VM base.
+        \item Saber dónde instalar Docker y Compose desde la documentación oficial.
+        \item Diferenciar imagen y contenedor.
+        \item Ejecutar comandos básicos: \texttt{run}, \texttt{ps}, \texttt{stop}, \texttt{rm}.
+        \item Construir y ejecutar una primera app en contenedor.
+      \end{itemize}
+    \end{block}
+    \column{0.36\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{44}{50}\selectfont\faDocker}\\[0.15cm]
+    {\small\textbf{Menos teoría, más terminal}}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Introducción y fundamentos}{Por qué Docker existe y cuándo ayuda}
+\section{S1 · Introducción y Fundamentos}
+
+\begin{frame}{El problema: «funciona en mi máquina»}
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \small
+    \begin{itemize}
+      \item La app funciona en la laptop del desarrollador.
+      \item En otro equipo falla por versiones distintas.
+      \item En producción aparecen librerías faltantes o configuraciones diferentes.
+      \item El equipo pierde tiempo reconstruyendo el entorno.
+    \end{itemize}
+    \begin{alertblock}{Clave}
+      Docker busca que el entorno viaje junto con la aplicación.
+    \end{alertblock}
+    \column{0.35\textwidth}
+    \centering
+    {\color{OTIred}\fontsize{38}{44}\selectfont\faExclamationTriangle}\\[0.1cm]
+    {\large\textbf{«En mi PC funciona»}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Solución: la contenerización}
+  \begin{columns}[c]
+    \column{0.56\textwidth}
+    \small
+    \begin{itemize}
+      \item Aislar la aplicación en un \textbf{contenedor} reproducible.
+      \item Empaquetar código, dependencias y configuración en una \textbf{imagen}.
+      \item Compartir esa imagen con el equipo o con un registro central.
+      \item Ejecutarla en distintos entornos con menos diferencias.
+    \end{itemize}
+    \begin{block}{Resultado}
+      La app deja de depender de «lo que justo estaba instalado» en una máquina.
+    \end{block}
+    \column{0.38\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{44}{50}\selectfont\faDocker}\\[0.25cm]
+    {\large\textbf{App + dependencias}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Qué es la contenerización}
+  \begin{columns}[T]
+    \column{0.54\textwidth}
+    \small
+    \begin{block}{En palabras simples}
+      La contenerización empaqueta una aplicación con lo necesario para ejecutarla de forma uniforme en diferentes entornos.
+    \end{block}
+    \begin{itemize}
+      \item Aplicación + dependencias.
+      \item Configuración mínima reproducible.
+      \item Ejecución aislada del resto del sistema.
+      \item Menos problemas de compatibilidad.
+    \end{itemize}
+    \column{0.40\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3.2cm, minimum height=1.2cm, align=center, text width=3.0cm, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+    ]
+      \node[box, fill=orange!15, draw=orange!70] (app) at (0,0) {\faCode\ \textbf{App}};
+      \node[box, fill=blue!10, draw=blue!60, below=0.55cm of app] (deps) {\faBox\ \textbf{Dependencias}};
+      \node[box, fill=green!12, draw=green!60!black, below=0.55cm of deps] (container) {\faArchive\ \textbf{Contenedor}};
+      \draw[arr] (app) -- (deps);
+      \draw[arr] (deps) -- (container);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{La pregunta natural}
+  \begin{columns}[c]
+    \column{0.48\textwidth}
+    \small
+    \begin{block}{Ya tenemos la idea}
+      Contenerizar es empaquetar una app con sus dependencias para ejecutarla igual en distintos entornos.
+    \end{block}
+    \vspace{0.18cm}
+    \begin{alertblock}{Ahora falta la herramienta}
+      \textbf{Docker} es una de las formas más usadas para construir, compartir y ejecutar esos contenedores.
+    \end{alertblock}
+    \vspace{0.1cm}
+    {\color{dockerblue}\bfseries Entonces... ¿qué es Docker?}
+    \column{0.46\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{64}{70}\selectfont\faDocker}\\[0.2cm]
+    {\large\bfseries Docker =}\\[0.1cm]
+    {\small Construir · Compartir · Ejecutar}\\[0.1cm]
+    {\small\itshape contenedores}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Entonces... ¿qué es Docker?}
+  \begin{center}
+    {\color{UUblack}\fontsize{25}{30}\selectfont\rmfamily\bfseries Si una VM virtualiza una máquina...}\\[0.30cm]
+    {\color{dockerblue}\fontsize{30}{35}\selectfont\rmfamily\bfseries Docker ejecuta aplicaciones}\\[0.08cm]
+    {\color{dockerblue}\fontsize{30}{35}\selectfont\rmfamily\bfseries en contenedores}\\[0.24cm]
+    {\color{OTIred}\rule{4cm}{1.3pt}}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Docker en una frase}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=3.5cm, minimum height=1.35cm, align=center, text width=3.3cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[box, fill=OTIred!10, draw=OTIred!70] (code) at (0,0) {\faCode\ \textbf{Código}\\App Flask};
+    \node[box, fill=orange!15, draw=orange!70, right=1.0cm of code] (deps) {\faBox\ \textbf{Dependencias}\\Python + librerías};
+    \node[box, fill=blue!10, draw=blue!60, right=1.0cm of deps] (img) {\faDocker\ \textbf{Imagen}\\Paquete reproducible};
+    \draw[arr] (code) -- (deps);
+    \draw[arr] (deps) -- (img);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Definición práctica}
+    Docker permite empaquetar una aplicación con sus dependencias para ejecutarla de forma consistente en diferentes equipos.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Docker: introducción práctica}
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item Docker es una plataforma \textit{open source} para crear, compartir y ejecutar contenedores.
+      \item Implementa la idea de contenerización en el flujo diario de desarrollo.
+      \item Facilita pruebas, despliegues y trabajo en equipo.
+      \item Se apoya en imágenes, contenedores, registros y la CLI de Docker.
+    \end{itemize}
+    \begin{alertblock}{Idea central}
+      Docker no reemplaza toda VM: resuelve la ejecución reproducible de aplicaciones.
+    \end{alertblock}
+    \column{0.36\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{58}{64}\selectfont\faDocker}\\[0.25cm]
+    {\Large\textbf{Docker}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Qué sí veremos y qué no veremos hoy}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Hoy sí}
+      \begin{itemize}
+        \item Concepto de Docker.
+        \item Concepto de contenerización.
+        \item Ruta oficial de instalación.
+        \item Imagen vs contenedor.
+        \item Comandos esenciales.
+        \item Primera app con Dockerfile.
+      \end{itemize}
+    \end{exampleblock}
+    \column{0.48\textwidth}
+    \begin{alertblock}{Hoy no}
+      \begin{itemize}
+        \item Kubernetes, OCI profundo o cgroups.
+        \item YAML avanzado.
+        \item Redes y volúmenes a detalle.
+        \item Producción con Nginx.
+      \end{itemize}
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Pero... ¿cómo funciona?}
+  \begin{center}
+    {\color{UUblack}\fontsize{19}{24}\selectfont\rmfamily\bfseries Entendido... ¿Pero cómo funciona?}\\[0.35cm]
+    {\color{UUdarkgray}\fontsize{18}{23}\selectfont\itshape ¿Es Docker simplemente otra...}\\[0.28cm]
+    {\color{dockerblue}\fontsize{32}{38}\selectfont\rmfamily\bfseries Máquina Virtual?}\\[0.28cm]
+    {\color{OTIred}\rule{4.2cm}{1.3pt}}
+  \end{center}
+\end{frame}
+
+\MainHeaderSlide{Virtualización\\e hipervisores}{Cómo se diferencia Docker de una máquina virtual}
+\section{S1 · Virtualización e Hipervisores}
+
+\begin{frame}{Antes de Docker: máquinas virtuales}
+  \begin{columns}[T]
+    \column{0.56\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item Una VM ejecuta un sistema operativo completo sobre hardware virtual.
+      \item Permite aislar entornos: Linux, Windows Server, laboratorios, pruebas.
+      \item Es útil cuando necesitas simular una máquina completa.
+      \item Consume más recursos que un contenedor porque incluye su propio kernel.
+    \end{itemize}
+    \begin{alertblock}{Idea clave}
+      La VM virtualiza una máquina; Docker empaqueta procesos aislados.
+    \end{alertblock}
+    \column{0.38\textwidth}
+    \centering
+    {\color{UUpurple}\fontsize{42}{48}\selectfont\faServer}\\[0.2cm]
+    {\normalsize\textbf{Máquina completa}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Qué es un hipervisor}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=4.7cm, minimum height=1.4cm, align=center, text width=4.4cm, font=\small},
+  ]
+    \node[box, fill=OTIred!10, draw=OTIred!70] (type1) at (0,0) {
+      {\color{OTIred}\faMicrochip\ \textbf{Tipo 1}}\\[3pt]
+      Corre directo sobre el hardware. Ejemplos: VMware ESXi, Hyper-V Server, Proxmox.
+    };
+    \node[box, fill=blue!10, draw=blue!60, right=1.0cm of type1] (type2) {
+      {\color{dockerblue}\faLaptop\ \textbf{Tipo 2}}\\[3pt]
+      Corre como aplicación del sistema host. Ejemplos: VirtualBox, VMware Workstation.
+    };
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.15cm}
+  \begin{block}{Para este curso}
+    Si necesitas un laboratorio local, una VM con Linux puede servir como entorno limpio para instalar Docker y practicar sin afectar tu sistema principal.
+  \end{block}
+\end{frame}
+
+\begin{frame}{La siguiente duda}
+  \begin{center}
+    {\color{UUblack}\fontsize{26}{32}\selectfont\rmfamily\bfseries ¿Y }%
+    {\color{OTIred}\fontsize{26}{32}\selectfont\rmfamily\bfseries Docker}%
+    {\color{UUblack}\fontsize{26}{32}\selectfont\rmfamily\bfseries ?}\\[0.38cm]
+    {\color{UUdarkgray}\fontsize{20}{25}\selectfont\itshape ¿Es un hipervisor?}\\[0.30cm]
+    {\color{UUdarkgray}\fontsize{19}{24}\selectfont\itshape ¿De qué tipo?}\\[0.30cm]
+    {\color{OTIred}\rule{4.0cm}{1.3pt}}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Docker vs máquina virtual}
+  \begin{center}
+    \begin{tikzpicture}[scale=0.64, transform shape,
+      box/.style={draw, rounded corners=6pt, minimum width=2.8cm, minimum height=1.2cm, align=center, font=\scriptsize},
+    ]
+      % VM side
+      \node[font=\small\bfseries] at (-1.5, 6.5) {\color{OTIred} Máquina Virtual};
+      \node[box, fill=OTIred!10, draw=OTIred!70] at (-1.5, 5.5) {App};
+      \node[box, fill=OTIred!10, draw=OTIred!70] at (-1.5, 4.2) {Bins / Libs};
+      \node[box, fill=OTIred!20, draw=OTIred!70] at (-1.5, 2.9) {Guest OS};
+      \node[box, fill=UUdarkgray!20, draw=UUdarkgray] at (-1.5, 1.6) {Hypervisor};
+      \node[box, fill=UUlightgray, draw=UUdarkgray] at (-1.5, 0.3) {Infrastructure};
+      
+      % Container side
+      \node[font=\small\bfseries] at (1.5, 6.5) {\color{dockerblue} Contenedor};
+      \node[box, fill=blue!10, draw=blue!60] at (1.5, 5.5) {App};
+      \node[box, fill=blue!10, draw=blue!60] at (1.5, 4.2) {Bins / Libs};
+      \node[box, fill=green!12, draw=green!60!black] at (1.5, 2.9) {Docker Engine};
+      \node[box, fill=UUlightgray, draw=UUdarkgray] at (1.5, 0.3) {Host OS + Infrastructure};
+      
+      % Braces
+      \draw[OTIred, thick, decorate, decoration={brace, amplitude=5pt}] (-3.2, 4.7) -- (-3.2, 5.8) node[midway, left, font=\tiny] {App};
+      \draw[dockerblue, thick, decorate, decoration={brace, amplitude=5pt}] (3.2, 4.7) -- (3.2, 5.8) node[midway, right, font=\tiny] {App};
+    \end{tikzpicture}
+  \end{center}
+  \vspace{-0.15cm}
+  \begin{alertblock}{Diferencia clave}
+    \small
+    La VM incluye un sistema operativo completo (Guest OS). El contenedor comparte el kernel del host y solo incluye lo que la app necesita.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{VM vs contenedor: decisión rápida}
+  \scriptsize
+  \begin{tabular}{p{0.25\textwidth} p{0.31\textwidth} p{0.33\textwidth}}
+    \toprule
+    Criterio & Máquina virtual & Contenedor \\
+    \midrule
+    Sistema operativo & Incluye SO completo & Comparte kernel del host \\
+    Arranque & Más lento & Rápido \\
+    Consumo & Mayor RAM y disco & Menor consumo \\
+    Aislamiento & Fuerte a nivel máquina & Aislado a nivel proceso \\
+    Uso común & Servidores y laboratorios & Apps reproducibles \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Instalando una VM: flujo recomendado}
+  \begin{center}
+  \begin{tikzpicture}[
+    stage/.style={draw, rounded corners=6pt, minimum width=2.35cm, minimum height=1.2cm, align=center, text width=2.15cm, font=\scriptsize, fill=UUlightgray, draw=UUdarkgray},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[stage] (iso) {\faDownload\\\textbf{ISO}\\Ubuntu Server};
+    \node[stage, right=0.45cm of iso] (vm) {\faCog\\\textbf{Crear VM}\\CPU, RAM, disco};
+    \node[stage, right=0.45cm of vm] (net) {\faNetworkWired\\\textbf{Red}\\NAT o bridge};
+    \node[stage, right=0.45cm of net] (install) {\faPlay\\\textbf{Instalar}\\Usuario y SSH};
+    \node[stage, right=0.45cm of install] (docker) {\faDocker\\\textbf{Docker}\\Practicar};
+    \draw[arr] (iso) -- (vm);
+    \draw[arr] (vm) -- (net);
+    \draw[arr] (net) -- (install);
+    \draw[arr] (install) -- (docker);
+  \end{tikzpicture}
+  \end{center}
+  \begin{alertblock}{Configuración sugerida}
+    2 CPU, 4 GB RAM, 25 GB disco, red NAT para empezar. Si necesitas acceso desde otros equipos, usa bridge.
+  \end{alertblock}
+\end{frame}
+
+\MainHeaderSlide{Instalación de Docker}{Preparar el entorno usando solo documentación oficial}
+\section{S1 · Instalación de Docker}
+
+\begin{frame}{Qué debes instalar}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=3.5cm, minimum height=1.35cm, align=center, text width=3.25cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[box, fill=blue!10, draw=blue!60] (docker) {\faDocker\ \textbf{Docker}\\Engine o Desktop};
+    \node[box, fill=green!12, draw=green!60!black, right=0.8cm of docker] (compose) {\faLayerGroup\ \textbf{Docker Compose}\\Orquestación local};
+    \node[box, fill=orange!15, draw=orange!70, right=0.8cm of compose] (verify) {\faCheckCircle\ \textbf{Validación}\\Entorno listo};
+    \draw[arr] (docker) -- (compose);
+    \draw[arr] (compose) -- (verify);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Criterio del curso}
+    No memorices comandos de instalación: pueden cambiar por sistema operativo. Usa siempre la guía oficial y valida según tu plataforma.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Ruta oficial según tu sistema}
+  \small
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Windows y macOS}
+      \begin{itemize}
+        \item Instalar \textbf{Docker Desktop}.
+        \item Incluye Docker Engine, CLI y Docker Compose.
+        \item Revisar requisitos de WSL 2 en Windows.
+      \end{itemize}
+      \vspace{0.1cm}
+      \href{https://docs.docker.com/desktop/}{\faExternalLink*\ docs.docker.com/desktop}
+    \end{exampleblock}
+    \column{0.48\textwidth}
+    \begin{block}{Linux o VM Linux}
+      \begin{itemize}
+        \item Instalar \textbf{Docker Engine} según distribución.
+        \item Revisar pasos post-instalación.
+        \item Instalar Compose desde la guía oficial.
+      \end{itemize}
+      \vspace{0.1cm}
+      \href{https://docs.docker.com/engine/install/}{\faExternalLink*\ docs.docker.com/engine/install}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Docker Compose y enlaces oficiales}
+  \footnotesize
+  \begin{tabular}{p{0.29\textwidth} p{0.36\textwidth} p{0.25\textwidth}}
+    \toprule
+    Tema & Cuándo usarlo & Documentación \\
+    \midrule
+    Docker Desktop & Windows/macOS o experiencia integrada & \href{https://docs.docker.com/desktop/}{Docker Desktop} \\
+    Docker Engine & Linux nativo o VM Linux & \href{https://docs.docker.com/engine/install/}{Docker Engine} \\
+    Post-instalación Linux & Permisos, servicio y ajustes posteriores & \href{https://docs.docker.com/engine/install/linux-postinstall/}{Linux post-install} \\
+    Docker Compose & Aplicaciones con varios servicios & \href{https://docs.docker.com/compose/install/}{Compose install} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.25cm}
+  \begin{alertblock}{Regla práctica}
+    Si una guía externa contradice la documentación oficial, se prioriza Docker Docs.
+  \end{alertblock}
+\end{frame}
+
+\MainHeaderSlide{Imágenes y contenedores}{La diferencia que debes dominar antes de escribir comandos}
+\section{S1 · Imágenes y Contenedores}
+
+\begin{frame}{Imagen vs contenedor}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=4.8cm, minimum height=2.0cm, align=center, text width=4.5cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, very thick, dockerblue}
+  ]
+    \node[box, fill=blue!10, draw=blue!60] (image) at (0,0) {
+      {\color{dockerblue}\faArchive\ \textbf{Imagen}}\\[4pt]
+      Plantilla inmutable con sistema base, dependencias y código.
+    };
+    \node[box, fill=green!12, draw=green!60!black, right=1.2cm of image] (container) {
+      {\color{green!60!black}\faPlayCircle\ \textbf{Contenedor}}\\[4pt]
+      Instancia en ejecución creada desde una imagen.
+    };
+    \draw[arr] (image) -- node[above, font=\scriptsize\bfseries] {docker run} (container);
+  \end{tikzpicture}
+  \end{center}
+  \begin{alertblock}{Regla mental}
+    La imagen es la receta; el contenedor es el plato servido y ejecutándose.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Ciclo de vida básico}
+  \begin{center}
+  \begin{tikzpicture}[
+    stage/.style={draw, rounded corners=6pt, minimum width=2.8cm, minimum height=1.25cm, align=center, fill=UUlightgray, draw=UUdarkgray},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[stage] (pull) {\faDownload\\\textbf{Obtener}\\\texttt{docker pull}};
+    \node[stage, right=0.65cm of pull] (run) {\faPlay\\\textbf{Ejecutar}\\\texttt{docker run}};
+    \node[stage, right=0.65cm of run] (ps) {\faList\\\textbf{Ver}\\\texttt{docker ps}};
+    \node[stage, right=0.65cm of ps] (stop) {\faStop\\\textbf{Detener}\\\texttt{docker stop}};
+    \draw[arr] (pull) -- (run);
+    \draw[arr] (run) -- (ps);
+    \draw[arr] (ps) -- (stop);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Lo mínimo para operar}
+    Ejecutar, listar, detener, eliminar contenedores y revisar imágenes locales.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Comandos esenciales}{Run, ps, stop, rm e images en práctica}
+\section{S1 · Comandos Esenciales}
+
+\begin{frame}[fragile]{Laboratorio 1: comprobar Docker}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=terminal]
+docker --version
+docker info
+docker run hello-world
+\end{lstlisting}
+    \column{0.46\textwidth}
+    \begin{block}{Qué validamos}
+      \begin{itemize}
+        \item La CLI responde.
+        \item El Engine está activo.
+        \item Docker puede descargar y ejecutar imágenes.
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Laboratorio 2: ejecutar Nginx}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+\begin{lstlisting}[style=terminal]
+docker run --name web-demo -d -p 8080:80 nginx
+
+docker ps
+
+# Abrir en navegador:
+# http://localhost:8080
+\end{lstlisting}
+    \column{0.40\textwidth}
+    \begin{exampleblock}{Qué significa}
+      \begin{itemize}
+        \item \texttt{--name}: nombre del contenedor.
+        \item \texttt{-d}: ejecuta en segundo plano.
+        \item \texttt{-p 8080:80}: publica el puerto.
+        \item \texttt{nginx}: imagen usada.
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Laboratorio 3: detener y limpiar}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+\begin{lstlisting}[style=terminal]
+docker stop web-demo
+docker ps -a
+docker rm web-demo
+docker images
+\end{lstlisting}
+    \column{0.40\textwidth}
+    \begin{alertblock}{Buenas prácticas}
+      \begin{itemize}
+        \item No acumules contenedores detenidos.
+        \item Usa nombres claros en laboratorios.
+        \item Verifica antes de borrar.
+      \end{itemize}
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Mapa rápido de comandos}
+  \footnotesize
+  \begin{tabular}{p{0.23\textwidth} p{0.32\textwidth} p{0.34\textwidth}}
+    \toprule
+    Comando & Para qué sirve & Ejemplo \\
+    \midrule
+    \texttt{docker run} & Crea y ejecuta un contenedor & \texttt{docker run nginx} \\
+    \texttt{docker ps} & Lista contenedores activos & \texttt{docker ps -a} \\
+    \texttt{docker stop} & Detiene un contenedor & \texttt{docker stop web-demo} \\
+    \texttt{docker rm} & Elimina contenedores detenidos & \texttt{docker rm web-demo} \\
+    \texttt{docker images} & Lista imágenes locales & \texttt{docker images} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\MainHeaderSlide{Primera aplicación}{Construir y ejecutar una app Flask mínima}
+\section{S1 · Primera Aplicación}
+
+\begin{frame}{Proyecto práctico de hoy}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=2.85cm, minimum height=1.35cm, align=center, text width=2.65cm, font=\scriptsize},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[box, fill=green!12, draw=green!60!black] (flask) {\faPython\ \textbf{Flask}\\Aplicación web};
+    \node[box, fill=blue!10, draw=blue!60, right=0.55cm of flask] (dockerfile) {\faFileCode\ \textbf{Dockerfile}\\Receta de imagen};
+    \node[box, fill=orange!15, draw=orange!70, right=0.55cm of dockerfile] (image) {\faArchive\ \textbf{Imagen}\\\texttt{mi-flask:v1}};
+    \node[box, fill=OTIred!10, draw=OTIred!70, right=0.55cm of image] (container) {\faPlay\ \textbf{Contenedor}\\Puerto 5000};
+    \draw[arr] (flask) -- (dockerfile);
+    \draw[arr] (dockerfile) -- (image);
+    \draw[arr] (image) -- (container);
+  \end{tikzpicture}
+  \end{center}
+  \begin{block}{Meta}
+    Crear una app mínima, construir su imagen y verla funcionando desde el navegador.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 1: crear archivos del proyecto}
+\begin{lstlisting}[style=terminal]
+cd codigos/sesion1
+
+# Archivos ya preparados para la practica:
+# app.py
+# requirements.txt
+# Dockerfile
+\end{lstlisting}
+  \begin{alertblock}{Estructura esperada}
+    Los archivos de la app están en \texttt{codigos/sesion1} junto al material de esta sesión.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 2: código de la app Flask}
+\begin{lstlisting}[language=Python]
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Hola Docker desde PIT 2026"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 3: dependencias}
+\begin{lstlisting}[style=terminal]
+# requirements.txt
+flask==3.0.3
+\end{lstlisting}
+  \begin{block}{Por qué declararlas}
+    El contenedor debe poder instalar lo necesario sin depender de lo que tenga la laptop del alumno.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 4: Dockerfile mínimo}
+\begin{lstlisting}[language=Dockerfile]
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py .
+
+EXPOSE 5000
+CMD ["python", "app.py"]
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 5: construir la imagen}
+\begin{lstlisting}[style=terminal]
+docker build -t mi-flask:v1 .
+
+docker images
+\end{lstlisting}
+  \begin{exampleblock}{Lectura del comando}
+    \texttt{-t mi-flask:v1} asigna nombre y versión a la imagen. El punto final indica que el contexto de build es la carpeta actual.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 6: ejecutar la aplicación}
+\begin{lstlisting}[style=terminal]
+docker run --name flask-demo -d -p 5000:5000 mi-flask:v1
+
+docker ps
+
+# Abrir:
+# http://localhost:5000
+\end{lstlisting}
+  \begin{block}{Resultado esperado}
+    El navegador debe mostrar: \texttt{Hola Docker desde PIT 2026}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Paso 7: limpiar el laboratorio}
+\begin{lstlisting}[style=terminal]
+docker stop flask-demo
+docker rm flask-demo
+
+# Opcional: borrar la imagen
+docker rmi mi-flask:v1
+\end{lstlisting}
+  \begin{alertblock}{Regla práctica}
+    Primero detienes el contenedor, luego lo eliminas. La imagen queda disponible hasta que decidas borrarla.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Errores frecuentes en la primera práctica}
+  \footnotesize
+  \begin{tabular}{p{0.30\textwidth} p{0.30\textwidth} p{0.30\textwidth}}
+    \toprule
+    Error & Causa probable & Solución rápida \\
+    \midrule
+    Puerto ocupado & Otro proceso usa 5000 & Cambiar a \texttt{-p 5001:5000} \\
+    No abre en navegador & Contenedor detenido & Revisar \texttt{docker ps -a} \\
+    Imagen no encontrada & Nombre mal escrito & Revisar \texttt{docker images} \\
+    Build falla & Archivo faltante o typo & Verificar carpeta y Dockerfile \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Checklist de aprendizaje — Sesión 1}
+  \begin{itemize}
+    \item Puedo explicar qué es un hipervisor y para qué sirve una VM.
+    \item Puedo describir el flujo básico para instalar una VM de laboratorio.
+    \item Puedo ubicar la documentación oficial para instalar Docker y Compose.
+    \item Puedo explicar qué es la contenerización y qué problema resuelve.
+    \item Puedo explicar por qué Docker evita diferencias entre entornos.
+    \item Puedo diferenciar imagen y contenedor con un ejemplo.
+    \item Puedo ejecutar, listar, detener y eliminar contenedores.
+    \item Puedo construir una imagen propia con \texttt{docker build}.
+    \item Puedo ejecutar mi primera app usando \texttt{docker run -p}.
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+% TRANSICIÓN A SESIÓN 2
+% ============================================================
+
+\begin{frame}{Resumen de la Sesión 1}
+  \footnotesize
+  \begin{enumerate}
+    \item Una VM virtualiza una máquina completa mediante un hipervisor.
+    \item La instalación de Docker y Compose se valida con la documentación oficial.
+    \item La contenerización empaqueta aplicaciones y dependencias.
+    \item Docker permite ejecutar entornos reproducibles.
+    \item Una imagen es una plantilla; un contenedor es una ejecución de esa imagen.
+    \item Ya ejecutamos comandos base y una primera aplicación Flask en contenedor.
+  \end{enumerate}
+  \vspace{0.08cm}
+  \begin{alertblock}{Ahora: Sesión 2}
+    \textbf{Dockerfile Profesional:} instrucciones clave, capas, caché y buenas prácticas.
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+% SESIÓN 2: DOCKERFILE PROFESIONAL
+% ============================================================
+
+\begin{frame}{Objetivo de la sesión 2}
+  \footnotesize
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \begin{block}{Al terminar la sesión 2 podrás}
+      \begin{itemize}
+        \item Escribir un Dockerfile con las instrucciones clave: FROM, RUN, COPY, ENV, EXPOSE y CMD.
+        \item Explicar cómo funcionan las capas y cómo afectan el rendimiento del build.
+        \item Aprovechar la caché de Docker para builds más rápidos.
+        \item Usar .dockerignore para evitar archivos innecesarios en la imagen.
+        \item Elegir imágenes base livianas (slim, alpine) según el caso.
+        \item Publicar imágenes en Docker Hub con tagging y versionado.
+      \end{itemize}
+    \end{block}
+    \column{0.36\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{44}{50}\selectfont\faDocker}\\[0.15cm]
+    {\small\textbf{De Dockerfile básico a imagen profesional}}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Recordatorio de la sesión\\anterior}{Lo que ya sabemos sobre imágenes y contenedores}
+\section{S2 · Recordatorio}
+
+\begin{frame}{Lo que ya dominamos}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item Contenerización: empaquetar app + dependencias.
+      \item Diferencia entre imagen (plantilla) y contenedor (ejecución).
+      \item Docker resuelve el problema de \textit{«en mi máquina funciona»}.
+      \item Comandos esenciales: \texttt{run}, \texttt{ps}, \texttt{stop}, \texttt{rm}, \texttt{images}.
+      \item Construimos y ejecutamos una app Flask en contenedor.
+    \end{itemize}
+    \begin{exampleblock}{Base para hoy}
+      Sabemos ejecutar contenedores desde imágenes existentes. Ahora crearemos nuestras propias imágenes de forma profesional.
+    \end{exampleblock}
+    \column{0.38\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3cm, minimum height=1.1cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+    ]
+      \node[box, fill=blue!10, draw=blue!60] (img) {\faArchive\\\textbf{Imagen}};
+      \node[box, fill=green!12, draw=green!60!black, below=0.6cm of img] (cont) {\faPlay\\\textbf{Contenedor}};
+      \draw[arr] (img) -- node[right, font=\scriptsize] {docker run} (cont);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Qué es un Dockerfile?}
+  \begin{center}
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3cm, minimum height=1.4cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, dockerblue}
+    ]
+      \node[box, fill=orange!15, draw=orange!70] (dockerfile) at (0,0) {\faFileCode\\\textbf{Dockerfile}\\\small Receta de imagen};
+      \node[box, fill=blue!10, draw=blue!60, right=1cm of dockerfile] (build) {\faCog\\\textbf{docker build}\\\small Construye la imagen};
+      \node[box, fill=green!12, draw=green!60!black, right=1cm of build] (img) {\faArchive\\\textbf{Imagen}\\\small Paquete reproducible};
+      \draw[arr] (dockerfile) -- (build);
+      \draw[arr] (build) -- (img);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Definición}
+    Un Dockerfile es un archivo de texto con instrucciones que Docker lee para construir una imagen automáticamente. Es la \textbf{receta} que define todo lo que necesita tu aplicación para ejecutarse.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Instrucciones clave\\del Dockerfile}{FROM, RUN, COPY, ENV, EXPOSE y CMD}
+\section{S2 · Instrucciones Clave del Dockerfile}
+
+\begin{frame}[fragile]{FROM: el punto de partida}
+  \begin{columns}[T]
+    \column{0.54\textwidth}
+\begin{lstlisting}[language=Dockerfile]
+FROM python:3.12-slim
+\end{lstlisting}
+    \vspace{0.2cm}
+    \begin{itemize}
+      \item Define la imagen base sobre la que se construye.
+      \item Es la \textbf{primera instrucción} de todo Dockerfile.
+      \item Puede ser una imagen oficial (python, node, nginx) o una imagen propia.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{exampleblock}{Consejo}
+      Usa imágenes oficiales siempre que puedas. Son mantenidas, actualizadas y más seguras que imágenes de terceros.
+    \end{exampleblock}
+    \begin{alertblock}{Versiones}
+      Evita \texttt{:latest} en producción. Fija una versión concreta (\texttt{:3.12-slim}) para builds reproducibles.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{RUN: ejecutar comandos durante el build}
+  \begin{columns}[T]
+    \column{0.54\textwidth}
+\begin{lstlisting}[language=Dockerfile]
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+\end{lstlisting}
+    \vspace{0.2cm}
+    \begin{itemize}
+      \item Ejecuta comandos \textbf{durante la construcción} de la imagen.
+      \item Se usa para instalar paquetes, crear carpetas, configurar el sistema.
+      \item Cada RUN crea una \textbf{nueva capa} en la imagen.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{block}{Buena práctica}
+      Encadena comandos con \texttt{\&\&} para reducir capas y limpiar cachés en la misma instrucción.
+    \end{block}
+    \begin{alertblock}{Regla de oro}
+      Limpia archivos temporales (\texttt{apt lists}, \texttt{pip cache}) en el mismo RUN para no arrastrar basura a la imagen final.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{COPY vs ADD}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\scriptsize]
+# COPY: copia archivos locales
+COPY requirements.txt .
+COPY app.py /app/
+\end{lstlisting}
+    \vspace{0.15cm}
+    \begin{itemize}
+      \item Copia archivos o carpetas desde el contexto de build (tu PC) hacia la imagen.
+      \item Es la opción \textbf{recomendada} para la mayoría de los casos.
+    \end{itemize}
+    \column{0.48\textwidth}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\scriptsize]
+# ADD: copia + descomprime + URLs
+ADD app.tar.gz /app/
+ADD https://example.com/file /tmp/
+\end{lstlisting}
+    \vspace{0.15cm}
+    \begin{itemize}
+      \item Además de copiar, descomprime automáticamente archivos \texttt{.tar.gz}.
+      \item Puede descargar desde URLs.
+      \item Úsalo solo cuando necesites la funcionalidad extra.
+    \end{itemize}
+  \end{columns}
+  \vspace{-0.05cm}
+  \begin{alertblock}{Regla práctica}
+    Prefiere \texttt{COPY}. Usa \texttt{ADD} solo si necesitas descomprimir automáticamente.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{WORKDIR: el directorio de trabajo}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+\begin{lstlisting}[language=Dockerfile]
+WORKDIR /app
+\end{lstlisting}
+    \vspace{0.2cm}
+    \begin{itemize}
+      \item Establece el directorio de trabajo para las instrucciones siguientes.
+      \item Si la carpeta no existe, Docker la \textbf{crea automáticamente}.
+      \item Afecta a \texttt{RUN}, \texttt{CMD}, \texttt{ENTRYPOINT}, \texttt{COPY} y \texttt{ADD}.
+    \end{itemize}
+    \column{0.44\textwidth}
+    \begin{block}{¿Por qué usarlo?}
+      \begin{itemize}
+        \item Evita rutas absolutas en cada comando.
+        \item Hace el Dockerfile más legible.
+        \item Previene errores de archivos en carpetas equivocadas.
+      \end{itemize}
+    \end{block}
+    \begin{alertblock}{Prefiere WORKDIR}
+      Prefiere \texttt{WORKDIR /app}; \texttt{RUN cd ...} no persiste entre instrucciones.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{ENV: variables de entorno}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.54\textwidth}
+\begin{lstlisting}[language=Dockerfile]
+ENV FLASK_ENV=production
+ENV APP_HOME=/app
+ENV PYTHONUNBUFFERED=1
+\end{lstlisting}
+    \vspace{0.2cm}
+    \begin{itemize}
+      \item Define variables de entorno disponibles en tiempo de build y en el contenedor.
+      \item Ideal para configuraciones que no cambian entre entornos.
+      \item Se pueden sobrescribir con \texttt{docker run -e}.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{exampleblock}{Cuándo usar ENV}
+      \begin{itemize}
+        \item Configuración por defecto de la app.
+        \item Versiones de herramientas.
+        \item Rutas y paths estándar.
+      \end{itemize}
+    \end{exampleblock}
+    \begin{alertblock}{Cuándo NO}
+      Secretos como contraseñas o tokens no deben quedar hardcodeados en la imagen.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{EXPOSE: declarar puertos}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[language=Dockerfile]
+EXPOSE 5000
+EXPOSE 80/tcp
+\end{lstlisting}
+    \vspace{0.2cm}
+    \begin{itemize}
+      \item \textbf{Documenta} qué puertos escucha el contenedor.
+      \item No publica el puerto automáticamente.
+      \item Sirve como metadata para otros desarrolladores y herramientas.
+    \end{itemize}
+    \column{0.46\textwidth}
+    \begin{block}{EXPOSE vs -p}
+      \begin{itemize}
+        \item \texttt{EXPOSE}: declara (informativo).
+        \item \texttt{docker run -p}: publica y mapea el puerto.
+      \end{itemize}
+    \end{block}
+    \vspace{0.2cm}
+    \begin{center}
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=4pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\scriptsize},
+      arr/.style={-{Stealth[length=2mm]}, thick}
+    ]
+      \node[box, fill=blue!10, draw=blue!60] (exp) {EXPOSE 5000\\\small Solo declara};
+      \node[box, fill=green!12, draw=green!60!black, right=0.5cm of exp] (p) {-p 5000:5000\\\small Publica el puerto};
+      \draw[arr, OTIred] (exp) -- node[above, font=\tiny] {+} (p);
+    \end{tikzpicture}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{CMD vs ENTRYPOINT}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{CMD}
+\begin{lstlisting}[language=Dockerfile]
+CMD ["python", "app.py"]
+\end{lstlisting}
+      \begin{itemize}
+        \item Comando por defecto al iniciar el contenedor.
+        \item Se puede \textbf{sobrescribir} desde \texttt{docker run}.
+        \item Forma exec (array) recomendada sobre forma shell.
+      \end{itemize}
+    \end{block}
+    \column{0.46\textwidth}
+    \begin{block}{ENTRYPOINT}
+\begin{lstlisting}[language=Dockerfile]
+ENTRYPOINT ["python"]
+CMD ["app.py"]
+\end{lstlisting}
+      \begin{itemize}
+        \item Define el ejecutable principal (no se sobrescribe fácilmente).
+        \item CMD proporciona argumentos por defecto al ENTRYPOINT.
+        \item Útil para crear herramientas CLI en contenedores.
+      \end{itemize}
+    \end{block}
+  \end{columns}
+  \vspace{-0.05cm}
+  \begin{exampleblock}{Regla general}
+    Usa \texttt{CMD} para apps. Usa \texttt{ENTRYPOINT + CMD} para herramientas CLI.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Resumen visual de instrucciones}
+  \scriptsize
+  \begin{tabular}{p{0.15\textwidth} p{0.35\textwidth} p{0.42\textwidth}}
+    \toprule
+    Instrucción & ¿Qué hace? & ¿Cuándo usarla? \\
+    \midrule
+    \texttt{FROM} & Define la imagen base & Siempre, como primera línea \\
+    \texttt{RUN} & Ejecuta comandos en el build & Instalar dependencias, scripts de setup \\
+    \texttt{COPY} & Copia archivos locales a la imagen & Mover código y archivos del proyecto \\
+    \texttt{WORKDIR} & Establece el directorio de trabajo & Al inicio y cuando cambies de contexto \\
+    \texttt{ENV} & Define variables de entorno & Configuraciones por defecto \\
+    \texttt{EXPOSE} & Declara puertos de escucha & Documentar qué puertos usa la app \\
+    \texttt{CMD} & Comando por defecto del contenedor & Iniciar la aplicación \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\MainHeaderSlide{Capas, caché y\\buenas prácticas}{Cómo Docker construye imágenes y cómo optimizarlas}
+\section{S2 · Capas, Caché y Buenas Prácticas}
+
+\begin{frame}{¿Cómo construye Docker una imagen?}
+  \begin{center}
+    \begin{tikzpicture}[
+      layer/.style={draw, rounded corners=4pt, minimum width=7cm, minimum height=0.70cm, align=center, font=\scriptsize},
+    ]
+      \node[layer, fill=blue!10, draw=blue!60] (l0) at (0,0) {FROM python:3.12-slim \hspace{2cm} \textit{← capa de la imagen base}};
+      \node[layer, fill=green!8, draw=green!50!black, below=0.04cm of l0] (l1) {WORKDIR /app \hspace{2.65cm} \textit{← capa 1}};
+      \node[layer, fill=orange!10, draw=orange!70, below=0.04cm of l1] (l2) {COPY requirements.txt . \hspace{2.1cm} \textit{← capa 2}};
+      \node[layer, fill=green!8, draw=green!50!black, below=0.04cm of l2] (l3) {RUN pip install -r requirements.txt \hspace{1.2cm} \textit{← capa 3}};
+      \node[layer, fill=orange!10, draw=orange!70, below=0.04cm of l3] (l4) {COPY app.py . \hspace{3.3cm} \textit{← capa 4}};
+      \node[layer, fill=OTIred!10, draw=OTIred!70, below=0.04cm of l4] (l5) {CMD ["python", "app.py"] \hspace{2.2cm} \textit{← capa 5 (metadatos)}};
+    \end{tikzpicture}
+  \end{center}
+  \vspace{-0.05cm}
+  \begin{block}{Cada instrucción del Dockerfile genera una capa}
+    Las capas son \textbf{inmutables}. Docker reutiliza las que no cambiaron mediante caché.
+  \end{block}
+\end{frame}
+
+\begin{frame}{La caché de Docker: cómo funciona}
+  \begin{columns}[c]
+    \column{0.56\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item Docker compara cada instrucción con la caché de builds anteriores.
+      \item Si la instrucción y sus dependencias no cambiaron, \textbf{reutiliza la capa}.
+      \item Si una capa cambia, \textbf{todas las capas siguientes se reconstruyen}.
+    \end{itemize}
+    \vspace{0.15cm}
+    \begin{alertblock}{Regla de oro del orden}
+      Pon primero lo que \textbf{cambia menos} (instalación de dependencias) y al final lo que \textbf{cambia más} (código de la app).
+    \end{alertblock}
+    \column{0.40\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=4pt, minimum width=3cm, minimum height=0.8cm, align=center, font=\scriptsize},
+    ]
+      \node[box, fill=green!12, draw=green!60!black] (a) {COPY requirements.txt\\\small \textit{(cambia poco)}};
+      \node[box, fill=green!12, draw=green!60!black, below=0.3cm of a] (b) {RUN pip install\\\small \textit{(usa caché)}};
+      \node[box, fill=orange!15, draw=orange!70, below=0.3cm of b] (c) {COPY app.py\\\small \textit{(cambia mucho)}};
+      \draw[{Stealth[length=3mm]}-{Stealth[length=3mm]}, thick, OTIred] (a.east) -- ++(0.8,0) node[right, font=\tiny] {Cache};
+      \draw[{Stealth[length=3mm]}-{Stealth[length=3mm]}, thick, OTIred] (b.east) -- ++(0.8,0) node[right, font=\tiny] {Cache};
+      \node[font=\tiny, color=UUdarkgray, right=0.3cm of c.east] {Reconstruye};
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Ejemplo: Dockerfile optimizado}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{alertblock}{Mal orden (lento)}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+FROM python:3.12
+
+COPY . /app          # TODO cambia
+WORKDIR /app
+
+RUN pip install \    # Siempre
+    -r requirements.txt
+
+CMD ["python","app.py"]
+\end{lstlisting}
+    \end{alertblock}
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Buen orden (rápido)}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Dependencias primero
+COPY requirements.txt .
+RUN pip install --no-cache-dir \
+    -r requirements.txt
+
+# Codigo al final
+COPY . .
+
+CMD ["python","app.py"]
+\end{lstlisting}
+    \end{exampleblock}
+  \end{columns}
+  \vspace{-0.05cm}
+  \begin{block}{¿Por qué es más rápido?}
+    Cachea dependencias; cambios en \texttt{app.py} no reinstalan paquetes.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Otras buenas prácticas}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{1. Usa imágenes base específicas}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+# Mal: imagen generica y pesada
+FROM python
+
+# Bien: version fija y liviana
+FROM python:3.12-slim
+\end{lstlisting}
+    \end{block}
+    \begin{block}{2. No instales paquetes innecesarios}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl && \
+    rm -rf /var/lib/apt/lists/*
+\end{lstlisting}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{3. Limpia en el mismo RUN}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+RUN pip install -r requirements.txt && \
+    rm -rf /root/.cache/pip
+\end{lstlisting}
+    \end{block}
+    \begin{block}{4. Usa multistage builds}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\tiny]
+# Stage 1: build
+FROM golang:1.21 AS builder
+RUN go build -o app
+
+# Stage 2: runtime (imagen final pequeña)
+FROM alpine:3.19
+COPY --from=builder /app .
+CMD ["./app"]
+\end{lstlisting}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Multistage build: el patrón profesional}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=6pt, minimum width=4cm, minimum height=2cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=4mm]}, very thick, dockerblue}
+    ]
+      \node[stage, fill=orange!15, draw=orange!70] (build) at (0,0) {
+        {\faCog\ \textbf{Stage 1: Builder}}\\[4pt]
+        \scriptsize
+        Imagen completa con\\compiladores y herramientas
+      };
+      \node[stage, fill=green!12, draw=green!60!black, right=1.5cm of build] (prod) {
+        {\faRocket\ \textbf{Stage 2: Runtime}}\\[4pt]
+        \scriptsize
+        Solo el binario,\\imagen mínima
+      };
+      \draw[arr] (build) -- node[above, font=\scriptsize] {COPY --from=builder} (prod);
+
+      \node[font=\footnotesize, below=0.8cm of build, text width=4cm, align=center] {\color{UUdarkgray}~500 MB};
+      \node[font=\footnotesize, below=0.8cm of prod, text width=4cm, align=center] {\color{UUdarkgray}~15 MB};
+    \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Ventaja}
+    La imagen final solo contiene lo necesario para ejecutar. Las herramientas de compilación quedan en la etapa de build y no contaminan la imagen de producción.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{.dockerignore e\\imágenes base livianas}{Evitar basura en la imagen y elegir la base correcta}
+\section{S2 · .dockerignore e Imágenes Base Livianas}
+
+\begin{frame}[fragile]{.dockerignore: qué es y para qué sirve}
+  \footnotesize
+  \begin{columns}[c]
+    \column{0.52\textwidth}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+# .dockerignore
+__pycache__
+*.pyc
+*.pyo
+.git
+.env
+*.log
+node_modules
+venv/
+.venv/
+.vscode/
+*.md
+Dockerfile
+docker-compose.yml
+\end{lstlisting}
+    \column{0.44\textwidth}
+    \begin{itemize}
+      \item Similar a \texttt{.gitignore}: archivos y carpetas que \textbf{no} se envían al contexto de build.
+      \item Reduce el tamaño del contexto y acelera el build.
+      \item Evita que archivos sensibles (\texttt{.env}, claves) terminen en la imagen.
+    \end{itemize}
+  \end{columns}
+  \vspace{-0.05cm}
+  \begin{alertblock}{Regla}
+    Incluye \texttt{.dockerignore}; evita enviar \texttt{node\_modules}, \texttt{.git} y credenciales.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Imágenes base: slim vs alpine}
+  \begin{center}
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3.8cm, minimum height=2.2cm, align=center, font=\small},
+    ]
+      \node[box, fill=OTIred!10, draw=OTIred!70] (full) at (0,0) {
+        {\color{OTIred}\faWeightHanging\ \textbf{Completa}}\\[4pt]
+        \texttt{python:3.12}\\[3pt]
+        \scriptsize
+        ~1 GB\\Todas las herramientas\\Debian completo
+      };
+      \node[box, fill=orange!15, draw=orange!70, right=0.8cm of full] (slim) {
+        {\color{orange!80}\faBalanceScale\ \textbf{Slim}}\\[4pt]
+        \texttt{python:3.12-slim}\\[3pt]
+        \scriptsize
+        ~150 MB\\Debian mínimo\\Lo esencial para Python
+      };
+      \node[box, fill=green!12, draw=green!60!black, right=0.8cm of slim] (alpine) {
+        {\color{green!50!black}\faFeather\ \textbf{Alpine}}\\[4pt]
+        \texttt{python:3.12-alpine}\\[3pt]
+        \scriptsize
+        ~50 MB\\Alpine Linux (musl)\\La más liviana
+      };
+    \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{¿Cuál elegir?}
+    \textbf{Slim}: buena relación tamaño/compatibilidad. \textbf{Alpine}: máxima reducción, pero puede tener problemas con paquetes que dependen de glibc. Para empezar, \texttt{slim} es la opción más segura.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Publicación en\\Docker Hub}{Tagging, versionado y subida de imágenes}
+\section{S2 · Publicación en Docker Hub}
+
+\begin{frame}{Flujo de publicación}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=6pt, minimum width=2.5cm, minimum height=1.3cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, dockerblue}
+    ]
+      \node[stage, fill=orange!15, draw=orange!70] (login) at (0,0) {\faUser\\\textbf{Login}\\\texttt{docker login}};
+      \node[stage, fill=blue!10, draw=blue!60, right=0.7cm of login] (tag) {\faTag\\\textbf{Etiquetar}\\\texttt{docker tag}};
+      \node[stage, fill=green!12, draw=green!60!black, right=0.7cm of tag] (push) {\faUpload\\\textbf{Publicar}\\\texttt{docker push}};
+      \node[stage, fill=OTIred!10, draw=OTIred!70, right=0.7cm of push] (pull) {\faDownload\\\textbf{Descargar}\\\texttt{docker pull}};
+      \draw[arr] (login) -- (tag);
+      \draw[arr] (tag) -- (push);
+      \draw[arr] (push) -- (pull);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{El ciclo completo}
+    1. Construyes tu imagen. \quad 2. Le asignas un tag. \quad 3. La publicas en un registro. \quad 4. Cualquiera puede descargarla y usarla.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Login y tagging}
+  \scriptsize
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{block}{1. Iniciar sesión en Docker Hub}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+docker login
+# Usuario: tu-usuario
+# Password: tu-token
+\end{lstlisting}
+    \end{block}
+    \vspace{-0.05cm}
+    \begin{block}{2. Etiquetar la imagen}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+# Formato:
+# usuario/imagen:tag
+
+docker tag mi-flask:v1 \
+  tony/mi-flask:v1
+\end{lstlisting}
+    \end{block}
+    \column{0.44\textwidth}
+    \begin{exampleblock}{Convención de tags}
+      \begin{itemize}
+        \item \texttt{v1, v2, v3}: versiones específicas.
+        \item \texttt{latest}: la más reciente (se actualiza manualmente).
+        \item \texttt{dev, staging, prod}: por entorno.
+        \item \texttt{2026-05-31}: por fecha de build.
+      \end{itemize}
+    \end{exampleblock}
+    \begin{alertblock}{Importante}
+      \texttt{latest} no es automático: tú decides qué imagen lo lleva.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Push y pull}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{3. Publicar la imagen}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+docker push tony/mi-flask:v1
+docker push tony/mi-flask:latest
+\end{lstlisting}
+    \vspace{0.1cm}
+    La imagen queda disponible en Docker Hub según la visibilidad del repositorio.
+    \end{block}
+    \column{0.46\textwidth}
+    \begin{block}{4. Descargar y ejecutar}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+docker pull tony/mi-flask:v1
+
+docker run -d -p 5000:5000 \
+  tony/mi-flask:v1
+\end{lstlisting}
+    \end{block}
+    \vspace{0.15cm}
+    \begin{exampleblock}{¿Pública o privada?}
+      Docker Hub permite 1 repo privado gratis. GHCR es alternativa para repos privados.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Laboratorio\\práctico}{Construir, optimizar y publicar una imagen profesional}
+\section{S2 · Laboratorio Práctico}
+
+\begin{frame}{Laboratorio: app Flask optimizada}
+  \begin{center}
+    \begin{tikzpicture}[
+      stepnode/.style={draw, rounded corners=6pt, minimum width=2.5cm, minimum height=1.2cm, align=center, font=\scriptsize},
+      arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+    ]
+      \node[stepnode, fill=orange!15, draw=orange!70] (s1) {\faFileCode\\\textbf{Escribir}\\Dockerfile optimizado};
+      \node[stepnode, fill=blue!10, draw=blue!60, right=0.5cm of s1] (s2) {\faCog\\\textbf{Build}\\Aprovechar caché};
+      \node[stepnode, fill=green!12, draw=green!60!black, right=0.5cm of s2] (s3) {\faPlay\\\textbf{Ejecutar}\\Probar la app};
+      \node[stepnode, fill=OTIred!10, draw=OTIred!70, right=0.5cm of s3] (s4) {\faUpload\\\textbf{Publicar}\\Docker Hub};
+      \draw[arr] (s1) -- (s2);
+      \draw[arr] (s2) -- (s3);
+      \draw[arr] (s3) -- (s4);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Objetivo}
+    Partiendo del proyecto Flask de la sesión 1, optimizar el Dockerfile con buenas prácticas, construir la imagen aprovechando caché y publicarla en Docker Hub.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Dockerfile optimizado para el laboratorio}
+\begin{lstlisting}[language=Dockerfile, basicstyle=\ttfamily\scriptsize]
+# Etapa 1: builder (si necesitas compilar)
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Etapa 2: imagen final (runtime)
+FROM python:3.12-slim
+WORKDIR /app
+# Copiar dependencias ya instaladas desde el builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages \
+     /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos del laboratorio}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=terminal]
+# 1. Construir la imagen
+docker build -t mi-flask:v2 .
+
+# 2. Ver las capas generadas
+docker history mi-flask:v2
+
+# 3. Ejecutar y probar
+docker run -d --name flask-v2 \
+  -p 5000:5000 mi-flask:v2
+
+curl http://localhost:5000
+\end{lstlisting}
+    \column{0.46\textwidth}
+\begin{lstlisting}[style=terminal]
+# 4. Login en Docker Hub
+docker login
+
+# 5. Etiquetar
+docker tag mi-flask:v2 \
+  tony/mi-flask:v2
+
+# 6. Publicar
+docker push tony/mi-flask:v2
+
+# 7. Verificar en:
+# hub.docker.com/r/tony/mi-flask
+\end{lstlisting}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Errores frecuentes en esta sesión}
+  \scriptsize
+  \begin{tabular}{p{0.28\textwidth} p{0.32\textwidth} p{0.32\textwidth}}
+    \toprule
+    Error & Causa probable & Solución rápida \\
+    \midrule
+    Build lento siempre & Mal orden de capas (COPY . . antes de RUN) & Mover dependencias antes del código \\
+    Imagen muy pesada & Usar imagen base \texttt{:latest} completa & Cambiar a \texttt{:slim} o \texttt{:alpine} \\
+    Caché no funciona & Cambió un archivo antes de lo esperado & Revisar orden: lo estable primero \\
+    \texttt{docker push} rechazado & No hay login o tag mal escrito & \texttt{docker login} y verificar \texttt{usuario/imagen:tag} \\
+    Archivos \texttt{.env} en la imagen & Falta \texttt{.dockerignore} & Crear \texttt{.dockerignore} y reconstruir \\
+    Error \texttt{no space left} & Imágenes acumuladas en disco & \texttt{docker system prune -a} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Checklist de aprendizaje — Sesión 2}
+  \begin{itemize}
+    \item Puedo escribir un Dockerfile con FROM, RUN, COPY, WORKDIR, ENV, EXPOSE y CMD.
+    \item Puedo explicar la diferencia entre COPY y ADD, CMD y ENTRYPOINT.
+    \item Puedo explicar qué es una capa y cómo afecta el orden de las instrucciones.
+    \item Puedo optimizar un Dockerfile para aprovechar la caché.
+    \item Puedo usar .dockerignore para excluir archivos del contexto de build.
+    \item Puedo elegir entre imagen base completa, slim y alpine.
+    \item Puedo publicar una imagen en Docker Hub con tagging y versionado.
+    \item Puedo descargar y ejecutar una imagen desde Docker Hub.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Resumen de la Sesión 2}
+  \footnotesize
+  \begin{enumerate}
+    \item Un Dockerfile define la receta para construir imágenes propias.
+    \item FROM, RUN, COPY, ENV, EXPOSE y CMD cubren el flujo base de una app.
+    \item El orden de capas afecta directamente la velocidad del build.
+    \item .dockerignore evita enviar basura o secretos al contexto de build.
+    \item Slim y Alpine ayudan a reducir tamaño, con criterios distintos.
+    \item Docker Hub permite compartir imágenes mediante tags versionados.
+  \end{enumerate}
+  \vspace{0.08cm}
+  \begin{alertblock}{Ahora: Sesión 3}
+    \textbf{Docker Compose:} levantar aplicaciones multi-contenedor con Flask, PostgreSQL y variables de entorno.
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+% SESIÓN 3: DOCKER COMPOSE Y APLICACIONES MULTI-CONTENEDOR
+% ============================================================
+
+\begin{frame}{Objetivo de la sesión 3}
+  \footnotesize
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \begin{block}{Al terminar la sesión 3 podrás}
+      \begin{itemize}
+        \item Explicar para qué sirve Docker Compose.
+        \item Levantar proyectos reales con múltiples servicios.
+        \item Entender la estructura de \texttt{docker-compose.yml}.
+        \item Conectar una aplicación Flask con PostgreSQL.
+        \item Configurar variables de entorno usando archivo \texttt{.env}.
+        \item Ejecutar, revisar y detener un stack completo con Compose.
+      \end{itemize}
+    \end{block}
+    \column{0.36\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{42}{48}\selectfont\faLayerGroup}\\[0.15cm]
+    {\small\textbf{Un comando, varios servicios}}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Docker Compose}{Levantar proyectos reales con múltiples servicios}
+\section{S3 · Docker Compose}
+
+\begin{frame}{El problema: una app ya no vive sola}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \small
+    \begin{itemize}
+      \item Una app real suele necesitar base de datos, cache, proxy o workers.
+      \item Ejecutar cada contenedor a mano vuelve el laboratorio repetitivo.
+      \item Los comandos \texttt{docker run} crecen con puertos, redes, volúmenes y variables.
+      \item El equipo necesita una forma reproducible de levantar todo el stack.
+    \end{itemize}
+    \begin{alertblock}{Pregunta clave}
+      ¿Cómo describimos una aplicación completa, no solo un contenedor?
+    \end{alertblock}
+    \column{0.39\textwidth}
+    \centering
+    {\color{OTIred}\fontsize{46}{52}\selectfont\faProjectDiagram}\\[0.15cm]
+    {\large\textbf{Multi-servicio}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Qué es Docker Compose}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=3.2cm, minimum height=1.25cm, align=center, text width=3.0cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, thick, dockerblue}
+  ]
+    \node[box, fill=orange!15, draw=orange!70] (yaml) {\faFileCode\\\textbf{compose.yml}\\Servicios declarados};
+    \node[box, fill=blue!10, draw=blue!60, right=0.8cm of yaml] (compose) {\faLayerGroup\\\textbf{Docker Compose}\\Orquesta localmente};
+    \node[box, fill=green!12, draw=green!60!black, right=0.8cm of compose] (stack) {\faCubes\\\textbf{Stack}\\App + BD + red};
+    \draw[arr] (yaml) -- (compose);
+    \draw[arr] (compose) -- (stack);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{block}{Definición práctica}
+    Docker Compose permite definir y ejecutar aplicaciones multi-contenedor usando un archivo YAML versionable.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{De docker run a docker compose}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{alertblock}{Sin Compose}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+docker network create app-net
+docker run -d --name db \
+  --network app-net postgres:16
+docker run -d --name web \
+  --network app-net -p 5000:5000 \
+  mi-flask:v3
+\end{lstlisting}
+    \end{alertblock}
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Con Compose}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+docker compose up -d
+docker compose ps
+docker compose down
+\end{lstlisting}
+      \vspace{0.1cm}
+      El archivo \texttt{docker-compose.yml} guarda la arquitectura del proyecto.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Estructura de compose.yml}{Servicios, redes, volúmenes y dependencias}
+\section{S3 · Estructura de docker-compose.yml}
+
+\begin{frame}{Piezas principales de Compose}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=4.6cm, minimum height=1.45cm, align=center, text width=4.3cm, font=\small},
+  ]
+    \node[box, fill=blue!10, draw=blue!60] (services) at (0,0) {\faCubes\ \textbf{services}\\Contenedores del proyecto};
+    \node[box, fill=green!12, draw=green!60!black, right=0.7cm of services] (networks) {\faNetworkWired\ \textbf{networks}\\Comunicación interna};
+    \node[box, fill=orange!15, draw=orange!70, below=0.45cm of services] (volumes) {\faDatabase\ \textbf{volumes}\\Datos persistentes};
+    \node[box, fill=OTIred!10, draw=OTIred!70, below=0.45cm of networks] (depends) {\faLink\ \textbf{depends\_on}\\Orden de arranque};
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.1cm}
+  \begin{block}{Idea mental}
+    Compose describe la topología local: qué servicios existen, cómo se conectan y qué datos conservan.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{docker-compose.yml mínimo}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+\end{lstlisting}
+  \vspace{-0.08cm}
+  \begin{alertblock}{Lectura rápida}
+    \texttt{web} construye la app. \texttt{db} usa PostgreSQL. Compose crea una red interna por defecto.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos esenciales de Compose}
+  \scriptsize
+  \begin{tabular}{p{0.30\textwidth} p{0.34\textwidth} p{0.25\textwidth}}
+    \toprule
+    Comando & Para qué sirve & Uso típico \\
+    \midrule
+    \texttt{docker compose up -d} & Levanta el stack en segundo plano & Iniciar laboratorio \\
+    \texttt{docker compose ps} & Lista servicios del proyecto & Ver estado \\
+    \texttt{docker compose logs -f} & Muestra logs integrados & Diagnóstico \\
+    \texttt{docker compose exec web sh} & Abre shell en un servicio & Debug \\
+    \texttt{docker compose down} & Detiene y elimina contenedores/red & Limpiar stack \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Dependencias entre servicios}
+  \begin{columns}[c]
+    \column{0.52\textwidth}
+    \small
+    \begin{itemize}
+      \item \texttt{depends\_on} define orden de arranque básico.
+      \item No garantiza que la base de datos ya acepte conexiones.
+      \item Para producción o laboratorios robustos se usan healthchecks.
+      \item En esta sesión nos enfocamos en levantar y conectar el stack.
+    \end{itemize}
+    \begin{alertblock}{Regla práctica}
+      Arrancar antes no significa estar listo para recibir tráfico.
+    \end{alertblock}
+    \column{0.42\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3.2cm, minimum height=1.1cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+    ]
+      \node[box, fill=green!12, draw=green!60!black] (db) {\faDatabase\\\textbf{db}};
+      \node[box, fill=blue!10, draw=blue!60, above=0.65cm of db] (web) {\faPython\\\textbf{web}};
+      \draw[arr] (web) -- node[right, font=\scriptsize] {depends\_on} (db);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Flask + PostgreSQL}{Integrar una aplicación con base de datos}
+\section{S3 · Flask con PostgreSQL}
+
+\begin{frame}{Arquitectura del laboratorio}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=3.2cm, minimum height=1.3cm, align=center, text width=3.0cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, thick, dockerblue}
+  ]
+    \node[box, fill=UUlightgray, draw=UUdarkgray] (browser) {\faDesktop\\\textbf{Navegador}\\localhost:5000};
+    \node[box, fill=blue!10, draw=blue!60, right=0.8cm of browser] (web) {\faPython\\\textbf{Flask}\\servicio \texttt{web}};
+    \node[box, fill=green!12, draw=green!60!black, right=0.8cm of web] (db) {\faDatabase\\\textbf{PostgreSQL}\\servicio \texttt{db}};
+    \draw[arr] (browser) -- node[above, font=\scriptsize] {HTTP} (web);
+    \draw[arr] (web) -- node[above, font=\scriptsize] {db:5432} (db);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.15cm}
+  \begin{block}{Clave de red interna}
+    Dentro de Compose, la app no se conecta a \texttt{localhost}; se conecta al nombre del servicio: \texttt{db}.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Variables de conexión en Flask}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize]
+import os
+
+DB_HOST = os.getenv("DB_HOST", "db")
+DB_NAME = os.getenv("DB_NAME", "appdb")
+DB_USER = os.getenv("DB_USER", "appuser")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+\end{lstlisting}
+    \column{0.46\textwidth}
+    \begin{block}{Por qué usar variables}
+      \begin{itemize}
+        \item Evitan hardcodear credenciales.
+        \item Permiten cambiar entorno sin tocar código.
+        \item Funcionan bien con \texttt{.env} y Compose.
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Compose para Flask + PostgreSQL}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+\end{lstlisting}
+\end{frame}
+
+\MainHeaderSlide{Variables de entorno}{Configurar el proyecto con archivo .env}
+\section{S3 · Variables con .env}
+
+\begin{frame}[fragile]{Archivo .env del proyecto}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+DB_HOST=db
+DB_NAME=appdb
+DB_USER=appuser
+DB_PASSWORD=appsecret
+FLASK_ENV=development
+\end{lstlisting}
+    \column{0.45\textwidth}
+    \begin{alertblock}{Importante}
+      No subas \texttt{.env} con credenciales reales a GitHub. Usa \texttt{.env.example} para documentar variables esperadas.
+    \end{alertblock}
+    \begin{block}{Para clase}
+      Usaremos valores simples de laboratorio para entender el flujo.
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{.env vs environment}
+  \footnotesize
+  \begin{tabular}{p{0.28\textwidth} p{0.31\textwidth} p{0.31\textwidth}}
+    \toprule
+    Opción & Ventaja & Cuándo usarla \\
+    \midrule
+    \texttt{environment} & Visible en el YAML & Valores simples o explícitos \\
+    \texttt{env\_file} & Separa configuración & Variables por entorno \\
+    \texttt{.env.example} & Documenta sin secretos & Repos compartidos \\
+    Secret manager & Mejor seguridad & Producción real \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.2cm}
+  \begin{alertblock}{Regla práctica}
+    El archivo \texttt{.env} ayuda en desarrollo; no es una bóveda de secretos.
+  \end{alertblock}
+\end{frame}
+
+\MainHeaderSlide{Laboratorio\\multi-contenedor}{Levantar Flask y PostgreSQL con Compose}
+\section{S3 · Laboratorio Compose}
+
+\begin{frame}{Flujo del laboratorio}
+  \begin{center}
+  \begin{tikzpicture}[
+    labstep/.style={draw, rounded corners=6pt, minimum width=2.45cm, minimum height=1.15cm, align=center, text width=2.25cm, font=\scriptsize},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[labstep, fill=orange!15, draw=orange!70] (s1) {\faFolderOpen\\\textbf{Preparar}\\archivos};
+    \node[labstep, fill=blue!10, draw=blue!60, right=0.45cm of s1] (s2) {\faFileCode\\\textbf{Compose}\\YAML};
+    \node[labstep, fill=green!12, draw=green!60!black, right=0.45cm of s2] (s3) {\faPlay\\\textbf{Levantar}\\up -d};
+    \node[labstep, fill=OTIred!10, draw=OTIred!70, right=0.45cm of s3] (s4) {\faSearch\\\textbf{Validar}\\logs + ps};
+    \draw[arr] (s1) -- (s2);
+    \draw[arr] (s2) -- (s3);
+    \draw[arr] (s3) -- (s4);
+  \end{tikzpicture}
+  \end{center}
+  \begin{block}{Meta}
+    Ejecutar una aplicación Flask conectada a PostgreSQL usando un solo archivo Compose.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos del laboratorio Compose}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=terminal]
+# 1. Levantar el stack
+docker compose up -d --build
+
+# 2. Revisar servicios
+docker compose ps
+
+# 3. Ver logs integrados
+docker compose logs -f
+\end{lstlisting}
+    \column{0.46\textwidth}
+\begin{lstlisting}[style=terminal]
+# 4. Probar la app
+curl http://localhost:5000
+
+# 5. Entrar al servicio web
+docker compose exec web sh
+
+# 6. Detener y limpiar
+docker compose down
+\end{lstlisting}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Errores frecuentes en Compose}
+  \scriptsize
+  \begin{tabular}{p{0.28\textwidth} p{0.32\textwidth} p{0.32\textwidth}}
+    \toprule
+    Error & Causa probable & Solución rápida \\
+    \midrule
+    App no conecta a BD & Usa \texttt{localhost} en vez de \texttt{db} & Cambiar host al nombre del servicio \\
+    Puerto ocupado & Otro proceso usa 5000 & Cambiar a \texttt{5001:5000} \\
+    Variables vacías & Falta \texttt{.env} o nombre incorrecto & Revisar \texttt{env\_file} y claves \\
+    BD pierde datos & No hay volumen persistente & Agregar volumen nombrado \\
+    Cambios no aparecen & Imagen antigua en caché & Usar \texttt{up -d --build} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Checklist de aprendizaje — Sesión 3}
+  \begin{itemize}
+    \item Puedo explicar para qué sirve Docker Compose.
+    \item Puedo leer la estructura básica de \texttt{docker-compose.yml}.
+    \item Puedo definir servicios, puertos, dependencias y volúmenes.
+    \item Puedo conectar Flask con PostgreSQL usando el nombre del servicio.
+    \item Puedo configurar variables con \texttt{.env} y \texttt{env\_file}.
+    \item Puedo levantar y detener un stack con \texttt{docker compose up} y \texttt{down}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Resumen de la Sesión 3}
+  \footnotesize
+  \begin{enumerate}
+    \item Compose describe aplicaciones multi-contenedor en un archivo YAML.
+    \item Los servicios se comunican por nombre dentro de la red del proyecto.
+    \item \texttt{ports} publica hacia la máquina host; la red interna usa nombres de servicio.
+    \item \texttt{volumes} permite conservar datos de PostgreSQL entre reinicios.
+    \item \texttt{.env} separa configuración del código y del YAML.
+  \end{enumerate}
+  \vspace{0.08cm}
+  \begin{alertblock}{Próxima sesión}
+    \textbf{Redes, volúmenes y persistencia:} comunicación interna, almacenamiento y datos durables.
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+% CIERRE GENERAL
+% ============================================================
+
+\begin{frame}{Resumen del programa (hasta ahora)}
+  \scriptsize
+  \begin{enumerate}
+    \item Docker resuelve el problema de reproducibilidad entre entornos.
+    \item Contenerizar es empaquetar app + dependencias para ejecución uniforme.
+    \item Una VM virtualiza una máquina completa; un contenedor comparte el kernel del host.
+    \item La instalación de Docker se guía por la documentación oficial, no de memoria.
+    \item Imagen = plantilla inmutable; contenedor = instancia en ejecución.
+    \item Comandos esenciales: run, ps, stop, rm, images, build.
+    \item Un Dockerfile es la receta profesional para construir imágenes propias.
+    \item Las capas son inmutables: el orden correcto acelera los builds con caché.
+    \item Slim y Alpine reducen drásticamente el tamaño de las imágenes.
+    \item Docker Hub permite compartir imágenes con tagging y versionado.
+    \item Docker Compose permite levantar stacks multi-contenedor reproducibles.
+    \item Flask y PostgreSQL pueden comunicarse usando nombres de servicio.
+  \end{enumerate}
+  \vspace{0.08cm}
+  \begin{alertblock}{Próxima sesión}
+    \textbf{Redes, volúmenes y persistencia:} datos durables y comunicación entre contenedores.
+  \end{alertblock}
+\end{frame}
+
+\end{document}

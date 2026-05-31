@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.env
+*.log
+node_modules
+venv/
+.venv/
+.vscode/
+*.md
