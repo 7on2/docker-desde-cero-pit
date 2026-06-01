@@ -9,11 +9,11 @@ Repositorio del curso PIT 2026 para aprender Docker desde cero hasta levantar ap
 | 01 | Contenedores desde cero | [Abrir](./clases/01-contenedores-desde-cero.md) | [Lab 01](./laboratorios/sesion1/README.md) |
 | 02 | Dockerfile profesional | [Abrir](./clases/02-dockerfile-profesional.md) | [Lab 02](./laboratorios/sesion2/README.md) |
 | 03 | Docker Compose y apps multi-contenedor | [Abrir](./clases/03-docker-compose.md) | [Lab 03](./laboratorios/sesion3/README.md) |
-| 04 | Redes, volumenes y persistencia | [Abrir](./clases/04-redes-volumenes-persistencia.md) | Por desarrollar |
+| 04 | Redes, volumenes y persistencia | [Abrir](./clases/04-redes-volumenes-persistencia.md) | [Lab 04](./laboratorios/sesion4/README.md) |
 | 05 | Docker en produccion | [Abrir](./clases/05-docker-en-produccion.md) | Por desarrollar |
 | 06 | Proyecto final y despliegue completo | [Abrir](./clases/06-proyecto-final.md) | Por desarrollar |
 
-> El indice sigue el temario oficial y los slides actuales. Las sesiones 1 a 3 tienen desarrollo completo en esta version.
+> El indice sigue el temario oficial y los slides actuales. Las sesiones 1 a 4 tienen desarrollo completo en esta version.
 
 ## Mapa Rapido
 
@@ -35,6 +35,7 @@ flowchart LR
 | [Sesion 1](./laboratorios/sesion1/README.md) | Construir y ejecutar una app Flask en contenedor | [codigo/sesion1](./codigo/sesion1/) |
 | [Sesion 2](./laboratorios/sesion2/README.md) | Optimizar Dockerfile, usar .dockerignore y tags | [codigo/sesion2](./codigo/sesion2/) |
 | [Sesion 3](./laboratorios/sesion3/README.md) | Levantar Flask + PostgreSQL con Compose | [codigo/sesion3](./codigo/sesion3/) |
+| [Sesion 4](./laboratorios/sesion4/README.md) | Aislar PostgreSQL, persistir datos y crear backups | [codigo/sesion4](./codigo/sesion4/) |
 
 ## Material De Apoyo
 

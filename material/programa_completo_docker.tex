@@ -1898,11 +1898,415 @@ docker compose down
 \end{frame}
 
 % ============================================================
+% SESIÓN 4: REDES, VOLÚMENES Y PERSISTENCIA
+% ============================================================
+
+\begin{frame}{Objetivo de la sesión 4}
+  \footnotesize
+  \begin{columns}[c]
+    \column{0.58\textwidth}
+    \begin{block}{Al terminar la sesión 4 podrás}
+      \begin{itemize}
+        \item Explicar cómo se comunican contenedores mediante redes Docker.
+        \item Diferenciar red interna, puertos publicados y nombres de servicio.
+        \item Usar volúmenes nombrados y bind mounts para persistencia.
+        \item Aislar servicios internos como bases de datos.
+        \item Agregar healthchecks para validar disponibilidad.
+        \item Realizar backup y restauración básica de datos del proyecto.
+      \end{itemize}
+    \end{block}
+    \column{0.36\textwidth}
+    \centering
+    {\color{dockerblue}\fontsize{42}{48}\selectfont\faNetworkWired}\\[0.15cm]
+    {\small\textbf{Datos durables y redes claras}}
+  \end{columns}
+\end{frame}
+
+\MainHeaderSlide{Redes Docker}{Comunicación entre contenedores}
+\section{S4 · Redes Docker}
+
+\begin{frame}{Qué problema resuelven las redes}
+  \begin{columns}[c]
+    \column{0.56\textwidth}
+    \small
+    \begin{itemize}
+      \item Los contenedores necesitan comunicarse sin depender de IPs manuales.
+      \item Compose crea una red interna por proyecto automáticamente.
+      \item Cada servicio puede resolverse por su nombre: \texttt{web}, \texttt{db}, \texttt{cache}.
+      \item Solo publicamos hacia el host lo que debe ser accesible desde fuera.
+    \end{itemize}
+    \begin{alertblock}{Idea clave}
+      Dentro de la red Docker, el nombre del servicio funciona como DNS interno.
+    \end{alertblock}
+    \column{0.38\textwidth}
+    \centering
+    {\color{OTIred}\fontsize{46}{52}\selectfont\faSitemap}\\[0.15cm]
+    {\large\textbf{DNS interno}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Red interna vs puerto publicado}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners=6pt, minimum width=3.2cm, minimum height=1.25cm, align=center, text width=3.0cm, font=\small},
+    arr/.style={-{Stealth[length=3mm]}, thick, dockerblue}
+  ]
+    \node[box, fill=UUlightgray, draw=UUdarkgray] (host) {\faLaptop\\\textbf{Host}\\localhost:5000};
+    \node[box, fill=blue!10, draw=blue!60, right=0.8cm of host] (web) {\faPython\\\textbf{web}\\5000 interno};
+    \node[box, fill=green!12, draw=green!60!black, right=0.8cm of web] (db) {\faDatabase\\\textbf{db}\\5432 interno};
+    \draw[arr] (host) -- node[above, font=\scriptsize] {ports} (web);
+    \draw[arr] (web) -- node[above, font=\scriptsize] {db:5432} (db);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.15cm}
+  \begin{block}{Regla práctica}
+    Publica la app web si necesitas navegador. No publiques la base de datos si solo la consume otro contenedor.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Definir una red explícita en Compose}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny]
+services:
+  web:
+    build: .
+    networks:
+      - backend
+
+  db:
+    image: postgres:16
+    networks:
+      - backend
+
+networks:
+  backend:
+\end{lstlisting}
+  \vspace{-0.05cm}
+  \begin{alertblock}{Cuándo hacerlo}
+    Define redes explícitas para separar tráfico o documentar mejor la arquitectura.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos útiles para redes}
+  \footnotesize
+  \begin{tabular}{p{0.34\textwidth} p{0.55\textwidth}}
+    \toprule
+    Comando & Uso \\
+    \midrule
+    \texttt{docker network ls} & Lista redes existentes \\
+    \texttt{docker network inspect <red>} & Muestra contenedores conectados \\
+    \texttt{docker compose ps} & Relaciona servicios y puertos publicados \\
+    \texttt{docker compose exec web sh} & Permite probar conectividad desde el servicio \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.2cm}
+  \begin{block}{Prueba rápida}
+    Desde \texttt{web}, el host de PostgreSQL debe ser \texttt{db}, no \texttt{localhost}.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Volúmenes y\\persistencia}{Mantener datos aunque el contenedor se elimine}
+\section{S4 · Volúmenes y Persistencia}
+
+\begin{frame}{Por qué se pierden datos}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item Un contenedor es reemplazable: puede eliminarse y recrearse.
+      \item Los datos escritos dentro del filesystem del contenedor no son una estrategia durable.
+      \item Las bases de datos necesitan almacenamiento externo al ciclo de vida del contenedor.
+      \item Docker ofrece volúmenes y bind mounts para resolverlo.
+    \end{itemize}
+    \vspace{-0.05cm}
+    \begin{alertblock}{Regla mental}
+      Contenedor reemplazable; datos persistentes.
+    \end{alertblock}
+    \column{0.39\textwidth}
+    \centering
+    {\color{OTIred}\fontsize{46}{52}\selectfont\faDatabase}\\[0.15cm]
+    {\large\textbf{Datos fuera del contenedor}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Volumen nombrado vs bind mount}
+  \footnotesize
+  \begin{tabular}{p{0.22\textwidth} p{0.35\textwidth} p{0.33\textwidth}}
+    \toprule
+    Tipo & Qué es & Cuándo usarlo \\
+    \midrule
+    Volumen nombrado & Almacenamiento administrado por Docker & Datos de bases de datos \\
+    Bind mount & Carpeta local montada en el contenedor & Desarrollo y edición de código \\
+    Sin volumen & Datos dentro del contenedor & Solo pruebas descartables \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.2cm}
+  \begin{block}{Analogía}
+    El contenedor es una laptop prestada; el volumen es el disco externo donde guardas lo importante.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Volumen nombrado para PostgreSQL}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+\end{lstlisting}
+  \begin{alertblock}{Clave}
+    Si eliminas el contenedor, el volumen puede seguir existiendo y conservar los datos.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Bind mount para desarrollo}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+services:
+  web:
+    build: .
+    volumes:
+      - ./app:/app
+    ports:
+      - "5000:5000"
+\end{lstlisting}
+  \begin{block}{Uso típico}
+    Montar código local dentro del contenedor para desarrollo. Para producción, normalmente se prefiere copiar el código en la imagen.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos útiles para volúmenes}
+  \footnotesize
+  \begin{tabular}{p{0.34\textwidth} p{0.55\textwidth}}
+    \toprule
+    Comando & Uso \\
+    \midrule
+    \texttt{docker volume ls} & Lista volúmenes \\
+    \texttt{docker volume inspect <volumen>} & Muestra detalles del volumen \\
+    \texttt{docker compose down} & Borra contenedores y red, conserva volúmenes \\
+    \texttt{docker compose down -v} & Borra también los volúmenes del proyecto \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.2cm}
+  \begin{alertblock}{Cuidado}
+    \texttt{down -v} elimina datos persistentes del stack. Úsalo solo si realmente quieres reiniciar desde cero.
+  \end{alertblock}
+\end{frame}
+
+\MainHeaderSlide{Servicios internos}{Aislar bases de datos y componentes privados}
+\section{S4 · Aislamiento de Servicios}
+
+\begin{frame}{Qué servicios deben ser internos}
+  \begin{columns}[c]
+    \column{0.52\textwidth}
+    \small
+    \begin{itemize}
+      \item La app web suele publicar un puerto para el navegador.
+      \item La base de datos normalmente solo debe recibir tráfico desde la app.
+      \item Redis, workers y colas suelen ser servicios internos.
+      \item Menos puertos publicados significa menor superficie de exposición.
+    \end{itemize}
+    \begin{alertblock}{Regla práctica}
+      Si el usuario no necesita entrar directamente, no publiques el puerto.
+    \end{alertblock}
+    \column{0.42\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=6pt, minimum width=3cm, minimum height=1cm, align=center, font=\small},
+      arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+    ]
+      \node[box, fill=UUlightgray, draw=UUdarkgray] (host) {Host};
+      \node[box, fill=blue!10, draw=blue!60, below=0.45cm of host] (web) {web publicado};
+      \node[box, fill=green!12, draw=green!60!black, below=0.45cm of web] (db) {db interno};
+      \draw[arr] (host) -- node[right, font=\scriptsize] {5000} (web);
+      \draw[arr] (web) -- node[right, font=\scriptsize] {5432} (db);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Base de datos interna en Compose}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    # Sin ports: no se expone al host
+\end{lstlisting}
+  \begin{block}{Lectura}
+    \texttt{web} está publicado para el navegador. \texttt{db} solo está disponible dentro de la red Docker del proyecto.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Healthchecks y backup}{Validar, respaldar y restaurar datos}
+\section{S4 · Healthchecks y Backup}
+
+\begin{frame}{Por qué usar healthchecks}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \small
+    \begin{itemize}
+      \item Un contenedor puede estar encendido pero no listo.
+      \item PostgreSQL puede tardar segundos en aceptar conexiones.
+      \item Un healthcheck permite declarar cómo verificar el estado real.
+      \item Mejora la observabilidad durante laboratorios y despliegues.
+    \end{itemize}
+    \begin{alertblock}{Idea clave}
+      \texttt{running} no siempre significa \texttt{healthy}.
+    \end{alertblock}
+    \column{0.39\textwidth}
+    \centering
+    {\color{UUgreen}\fontsize{46}{52}\selectfont\faHeartbeat}\\[0.15cm]
+    {\large\textbf{Listo para operar}}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Healthcheck para PostgreSQL}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+services:
+  db:
+    image: postgres:16
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+\end{lstlisting}
+  \begin{block}{Lectura}
+    Docker ejecuta \texttt{pg\_isready}. Si responde correctamente, marca el servicio como saludable.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Backup básico de PostgreSQL}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+# Crear carpeta local para backups
+mkdir backups
+
+# Exportar datos desde el servicio db
+docker compose exec -T db pg_dump \
+  -U appuser appdb > backups/appdb.sql
+\end{lstlisting}
+  \begin{alertblock}{Regla práctica}
+    Un volumen conserva datos localmente, pero backup significa tener una copia exportable fuera del contenedor.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Restaurar información}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize]
+# Restaurar desde el archivo SQL
+docker compose exec -T db psql \
+  -U appuser appdb < backups/appdb.sql
+\end{lstlisting}
+  \begin{block}{Antes de restaurar}
+    Verifica que el servicio \texttt{db} esté arriba, que el usuario sea correcto y que el archivo exista en tu máquina.
+  \end{block}
+\end{frame}
+
+\MainHeaderSlide{Laboratorio\\datos y redes}{Aislar PostgreSQL, persistir datos y probar respaldo}
+\section{S4 · Laboratorio Datos y Redes}
+
+\begin{frame}{Flujo del laboratorio}
+  \begin{center}
+  \begin{tikzpicture}[
+    labstep/.style={draw, rounded corners=6pt, minimum width=2.35cm, minimum height=1.1cm, align=center, text width=2.15cm, font=\scriptsize},
+    arr/.style={-{Stealth[length=3mm]}, thick, OTIred}
+  ]
+    \node[labstep, fill=blue!10, draw=blue!60] (s1) {\faNetworkWired\\\textbf{Red}\\interna};
+    \node[labstep, fill=green!12, draw=green!60!black, right=0.45cm of s1] (s2) {\faDatabase\\\textbf{Volumen}\\persistente};
+    \node[labstep, fill=orange!15, draw=orange!70, right=0.45cm of s2] (s3) {\faHeartbeat\\\textbf{Healthcheck}\\db};
+    \node[labstep, fill=OTIred!10, draw=OTIred!70, right=0.45cm of s3] (s4) {\faSave\\\textbf{Backup}\\SQL};
+    \draw[arr] (s1) -- (s2);
+    \draw[arr] (s2) -- (s3);
+    \draw[arr] (s3) -- (s4);
+  \end{tikzpicture}
+  \end{center}
+  \begin{block}{Meta}
+    Mejorar el stack Flask + PostgreSQL para que la base de datos sea interna, persistente y respaldable.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos del laboratorio}
+  \footnotesize
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=terminal]
+# 1. Levantar stack
+docker compose up -d --build
+
+# 2. Revisar puertos
+docker compose ps
+
+# 3. Inspeccionar red
+docker network ls
+docker network inspect <red>
+\end{lstlisting}
+    \column{0.46\textwidth}
+\begin{lstlisting}[style=terminal]
+# 4. Ver volumenes
+docker volume ls
+
+# 5. Backup
+mkdir backups
+docker compose exec -T db pg_dump \
+  -U appuser appdb > backups/appdb.sql
+\end{lstlisting}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Errores frecuentes en datos y redes}
+  \scriptsize
+  \begin{tabular}{p{0.28\textwidth} p{0.32\textwidth} p{0.32\textwidth}}
+    \toprule
+    Error & Causa probable & Solución rápida \\
+    \midrule
+    App no conecta a BD & Host incorrecto o red distinta & Usar \texttt{db} y misma red \\
+    BD expuesta al host & Se agregó \texttt{ports} en \texttt{db} & Quitar \texttt{ports} si no es necesario \\
+    Datos desaparecen & Sin volumen persistente & Agregar volumen nombrado \\
+    Backup falla & Usuario o BD incorrectos & Revisar \texttt{DB\_USER} y \texttt{DB\_NAME} \\
+    Servicio no está listo & Falta healthcheck o espera & Revisar logs y estado healthy \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Checklist de aprendizaje — Sesión 4}
+  \begin{itemize}
+    \item Puedo explicar cómo Docker resuelve nombres de servicios en una red.
+    \item Puedo diferenciar puerto publicado y comunicación interna.
+    \item Puedo usar volúmenes nombrados para persistir datos.
+    \item Puedo usar bind mounts para desarrollo local.
+    \item Puedo mantener PostgreSQL como servicio interno.
+    \item Puedo crear un backup y restaurarlo con comandos básicos.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Resumen de la Sesión 4}
+  \footnotesize
+  \begin{enumerate}
+    \item Los servicios se comunican por nombre dentro de redes Docker.
+    \item Los puertos publicados son para acceso desde el host, no para comunicación interna.
+    \item Los volúmenes nombrados conservan datos aunque se recree el contenedor.
+    \item Los bind mounts son útiles para desarrollo y edición local.
+    \item Los healthchecks verifican disponibilidad real, no solo ejecución.
+    \item Backup y restauración convierten datos persistentes en datos recuperables.
+  \end{enumerate}
+  \vspace{0.08cm}
+  \begin{alertblock}{Próxima sesión}
+    \textbf{Docker en producción:} Nginx, multi-stage builds, credenciales seguras, logging y monitoreo.
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
 % CIERRE GENERAL
 % ============================================================
 
 \begin{frame}{Resumen del programa (hasta ahora)}
-  \scriptsize
+  \tiny
   \begin{enumerate}
     \item Docker resuelve el problema de reproducibilidad entre entornos.
     \item Contenerizar es empaquetar app + dependencias para ejecución uniforme.
@@ -1916,10 +2320,12 @@ docker compose down
     \item Docker Hub permite compartir imágenes con tagging y versionado.
     \item Docker Compose permite levantar stacks multi-contenedor reproducibles.
     \item Flask y PostgreSQL pueden comunicarse usando nombres de servicio.
+    \item Redes Docker separan comunicación interna de puertos publicados.
+    \item Volúmenes, healthchecks y backups hacen el stack más durable.
   \end{enumerate}
-  \vspace{0.08cm}
+  \vspace{-0.02cm}
   \begin{alertblock}{Próxima sesión}
-    \textbf{Redes, volúmenes y persistencia:} datos durables y comunicación entre contenedores.
+    \textbf{Docker en producción:} reverse proxy, credenciales, logging y monitoreo.
   \end{alertblock}
 \end{frame}
 
