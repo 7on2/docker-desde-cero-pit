@@ -15,18 +15,16 @@ Repositorio del curso PIT 2026 para aprender Docker desde cero hasta levantar ap
 
 > El indice sigue el temario oficial y los slides actuales. Las sesiones 1 a 4 tienen desarrollo completo en esta version.
 
-## Mapa Rapido
+## Ruta Rapida Del Programa
 
-```mermaid
-flowchart LR
-    S1["S1 Contenedores"] --> S2["S2 Dockerfile"] --> S3["S3 Compose"] --> S4["S4 Redes y volumenes"] --> S5["S5 Produccion"] --> S6["S6 Proyecto final"]
-    style S1 fill:#1f6feb,stroke:#58a6ff,color:#fff
-    style S2 fill:#238636,stroke:#3fb950,color:#fff
-    style S3 fill:#8957e5,stroke:#bc8cff,color:#fff
-    style S4 fill:#9e6a03,stroke:#d29922,color:#fff
-    style S5 fill:#da3633,stroke:#f85149,color:#fff
-    style S6 fill:#30363d,stroke:#8b949e,color:#fff
-```
+| Etapa | Enfoque | Resultado esperado |
+|---|---|---|
+| 1 | Contenedores, imagenes y ciclo de vida | Ejecutar aplicaciones aisladas y entender la diferencia entre imagen y contenedor |
+| 2 | Dockerfile profesional y buenas practicas | Construir imagenes reproducibles, livianas y faciles de publicar |
+| 3 | Docker Compose y stacks multi-contenedor | Levantar Flask + PostgreSQL con configuracion versionada |
+| 4 | Redes, volumenes y persistencia | Comunicar servicios por nombre, aislar la BD y conservar datos |
+| 5 | Produccion, reverse proxy y monitoreo | Preparar despliegues mas seguros, observables y mantenibles |
+| 6 | Proyecto final | Integrar el flujo completo en una aplicacion desplegable |
 
 ## Laboratorios
 
@@ -42,10 +40,7 @@ flowchart LR
 | Material | Descripcion |
 |---|---|
 | [Slides completos](./material/slides-programa-completo-docker.pdf) | Presentacion Beamer del curso. |
-| [Fuente LaTeX](./material/programa_completo_docker.tex) | Archivo fuente de los slides. |
-| [Temario oficial](./material/temario-docker-desde-cero.pdf) | PDF con objetivos, requisitos y sesiones. |
-| [Imagenes](./imagenes/) | Recursos visuales usados por el curso. |
-| [Recursos](./recursos/) | Logos y material complementario. |
+| Libros recomendados | Por agregar. |
 
 ## Requisitos
 
