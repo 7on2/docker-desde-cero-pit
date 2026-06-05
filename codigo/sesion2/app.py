@@ -1,12 +1,20 @@
-from flask import Flask
-
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 
 @app.route("/")
 def home():
-    return "Hola Docker desde una imagen optimizada"
+    return jsonify({
+        "curso": "Docker desde cero",
+        "sesion": 2,
+        "mensaje": "Imagen construida con Dockerfile"
+    })
+
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
 
 if __name__ == "__main__":
