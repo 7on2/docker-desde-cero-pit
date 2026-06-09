@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestor de Tareas</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; background: #f6f7f9; color: #1f2937; }
+    main { background: white; border-radius: 14px; padding: 24px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08); }
+    h1 { margin-top: 0; color: #b91c1c; }
+    li { margin: 10px 0; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gestor de Tareas</h1>
+    <p>Aplicacion Flask conectada a PostgreSQL dentro de Docker.</p>
+    <ul>
+      {% for tarea in tareas %}
+      <li>#{{ tarea[0] }} - {{ tarea[1] }} {% if tarea[2] %}(completada){% endif %}</li>
+      {% else %}
+      <li>No hay tareas registradas.</li>
+      {% endfor %}
+    </ul>
+    <p>Crear tarea:</p>
+    <code>curl -X POST http://localhost/tareas -H 'Content-Type: application/json' -d '{"titulo":"Nueva tarea"}'</code>
+  </main>
+</body>
+</html>

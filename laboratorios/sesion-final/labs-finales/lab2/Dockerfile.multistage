@@ -1,0 +1,28 @@
+FROM python:3.11 AS builder
+
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --target=/install -r requirements.txt
+
+FROM python:3.11-slim AS runtime
+
+LABEL maintainer="tony@uni.edu.pe"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/deps
+
+WORKDIR /app
+
+COPY --from=builder /install ./deps
+COPY app/ .
+
+RUN useradd --no-create-home --shell /bin/false appuser
+USER appuser
+
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/')" || exit 1
+
+CMD ["python", "-m", "gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]

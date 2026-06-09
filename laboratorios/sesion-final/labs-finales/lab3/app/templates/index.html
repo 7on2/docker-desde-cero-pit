@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestor de Tareas - Compose</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: #f9fafb; }
+    main { max-width: 780px; margin: 48px auto; padding: 28px; background: #1f2937; border-radius: 16px; }
+    h1 { color: #f87171; }
+    li { padding: 8px 0; border-bottom: 1px solid #374151; }
+    code { display: block; overflow-x: auto; background: #030712; padding: 12px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gestor de Tareas con Docker Compose</h1>
+    <p>Stack: Nginx -> Flask -> PostgreSQL.</p>
+    <ul>
+      {% for tarea in tareas %}
+      <li>#{{ tarea[0] }} - {{ tarea[1] }} {% if tarea[2] %}(completada){% endif %}</li>
+      {% else %}
+      <li>No hay tareas registradas.</li>
+      {% endfor %}
+    </ul>
+    <code>curl -X POST http://localhost:8080/tareas -H 'Content-Type: application/json' -d '{"titulo":"Nueva tarea"}'</code>
+  </main>
+</body>
+</html>

@@ -10,10 +10,10 @@ Repositorio del curso PIT 2026 para aprender Docker desde cero hasta levantar ap
 | 02 | Dockerfile profesional | [Abrir](./clases/02-dockerfile-profesional.md) | [Lab 02](./laboratorios/sesion2/README.md) |
 | 03 | Docker Compose y apps multi-contenedor | [Abrir](./clases/03-docker-compose.md) | [Lab 03](./laboratorios/sesion3/README.md) |
 | 04 | Redes, volumenes y persistencia | [Abrir](./clases/04-redes-volumenes-persistencia.md) | [Lab 04](./laboratorios/sesion4/README.md) |
-| 05 | Docker en produccion | [Abrir](./clases/05-docker-en-produccion.md) | Por desarrollar |
-| 06 | Proyecto final y despliegue completo | [Abrir](./clases/06-proyecto-final.md) | Por desarrollar |
+| 05 | Docker en produccion | [Abrir](./clases/05-docker-en-produccion.md) | [Labs finales](./laboratorios/sesion-final/labs-finales/README.md) |
+| 06 | Proyecto final y despliegue completo | [Abrir](./clases/06-proyecto-final.md) | [Labs finales](./laboratorios/sesion-final/labs-finales/README.md) |
 
-> El indice sigue el temario oficial y los slides actuales. Las sesiones 1 a 4 tienen desarrollo completo en esta version.
+> El indice sigue el temario oficial y los slides actuales. La sesion final incluye laboratorios integradores para practicar en clase.
 
 ## Ruta Rapida Del Programa
 
@@ -34,6 +34,7 @@ Repositorio del curso PIT 2026 para aprender Docker desde cero hasta levantar ap
 | [Sesion 2](./laboratorios/sesion2/README.md) | Optimizar Dockerfile, usar .dockerignore y tags | [codigo/sesion2](./codigo/sesion2/) |
 | [Sesion 3](./laboratorios/sesion3/README.md) | Levantar Flask + PostgreSQL con Compose | [codigo/sesion3](./codigo/sesion3/) |
 | [Sesion 4](./laboratorios/sesion4/README.md) | Aislar PostgreSQL, persistir datos y crear backups | [codigo/sesion4](./codigo/sesion4/) |
+| [Sesion final](./laboratorios/sesion-final/labs-finales/README.md) | Integrar Docker CLI, Dockerfile, Compose y produccion | [labs-finales](./laboratorios/sesion-final/labs-finales/) |
 
 ## Material De Apoyo
 

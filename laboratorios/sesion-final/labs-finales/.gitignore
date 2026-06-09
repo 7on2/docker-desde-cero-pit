@@ -1,0 +1,11 @@
+.env
+**/.env
+backups/
+**/backups/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.dump
+*.tar
+*.tar.gz
