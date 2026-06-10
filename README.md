@@ -43,6 +43,12 @@ Repositorio del curso PIT 2026 para aprender Docker desde cero hasta levantar ap
 | [Slides completos](./material/slides-programa-completo-docker.pdf) | Presentacion Beamer del curso. |
 | Libros recomendados | Por agregar. |
 
+## Bonus: IA para Operaciones
+
+| Tema | Descripcion |
+|------|-------------|
+| [Inteligencia Artificial para Operaciones](./bonus-ia/README.md) | LLMs, tokens, agentes, MCP, skills, Claude, opencode y como integran con Docker e infraestructura |
+
 ## Requisitos
 
 - Docker Desktop o Docker Engine instalado.
