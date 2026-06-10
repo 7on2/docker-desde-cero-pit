@@ -1,6 +1,6 @@
 # Bonus: Inteligencia Artificial para Operaciones — Conceptos Fundamentales
 
-Complemento del curso Docker PIT que introduce los conceptos de IA generativa, agentes, tokens, MCP, skills, LLMs y herramientas como Claude y opencode, orientados a profesionales de infraestructura y seguridad.
+Introducción a los conceptos de IA generativa, agentes, tokens, MCP, skills, LLMs y herramientas como Claude y opencode, orientados a profesionales de infraestructura y seguridad.
 
 ---
 
@@ -267,25 +267,25 @@ En el contexto de herramientas como opencode, una **skill** es un conjunto de in
 2. **Activación**: Cuando el usuario describe una tarea que coincide con la descripción de una skill, el agente carga automáticamente las instrucciones especializadas.
 3. **Ejecución**: El agente sigue las instrucciones de la skill para completar la tarea con mayor precisión.
 
-### Ejemplo: Skill de Beamer para Cursos PIT
+### Ejemplo: Skill de Despliegue Docker
 
 ```markdown
 ---
-name: Beamer Cursos PIT
-description: Crear presentaciones LaTeX Beamer con branding institucional OTI
-trigger: beamer, presentacion, slides, .tex, curso PIT
+name: Docker Deploy
+description: Desplegar aplicaciones con Docker Compose siguiendo buenas prácticas
+trigger: deploy, docker compose, production, despliegue
 ---
 
 ## Instrucciones
 
-1. Usar el tema UU con colores OTIred.
-2. Incluir logo UNI en la esquina.
-3. Crear slides obligatorios: portada, objetivos, contenido, resumen.
-4. Usar TikZ para diagramas visuales.
-5. Compilar con XeLaTeX.
+1. Verificar que .env existe y no tiene valores por defecto.
+2. Ejecutar docker compose config para validar el YAML.
+3. Construir imágenes con --no-cache en producción.
+4. Verificar healthchecks antes de dar por exitoso el despliegue.
+5. Confirmar con docker compose ps que todos los servicios están healthy.
 ```
 
-Cuando el usuario pide "crear una presentación Beamer", opencode carga esta skill y sigue las instrucciones especializadas en vez de generar código Beamer genérico.
+Cuando el usuario pide "desplegar con Docker Compose", opencode carga esta skill y sigue las instrucciones especializadas en vez de ejecutar comandos genéricos.
 
 ### Skills vs Tools vs Prompts
 
@@ -381,7 +381,7 @@ Claude responderá con un `tool_use` block solicitando ejecutar `docker_ps`, y t
 | **Modo terminal** | Interfaz TUI interactiva en la terminal. No requiere IDE. |
 | **Multi-modelo** | Soporta Claude, GPT-4, Gemini, Llama y otros vía proveedores configurables. |
 | **Herramientas nativas** | bash, read, write, edit, grep, glob, web_fetch y más. |
-| **Skills** | Instrucciones especializadas que se activan por contexto (ej. Beamer, Docker, LaTeX). |
+| **Skills** | Instrucciones especializadas que se activan por contexto (ej. Docker, LaTeX, producción). |
 | **MCP** | Se conecta a servidores MCP para extender capacidades (BD, APIs, Obsidian, etc.). |
 | **Subagents** | Puede lanzar agentes secundarios especializados (explore, general) para tareas en paralelo. |
 | **Todo tracking** | Sistema de seguimiento de tareas integrado. |
@@ -423,13 +423,13 @@ Las skills se definen en `.opencode/skills/`:
 ```
 .opencode/
   skills/
-    beamer-cursos-pit/
-      SKILL.md       ← Instrucciones especializadas
+    docker-deploy/
+      SKILL.md       ← Instrucciones de despliegue Docker
     docker-hardening/
       SKILL.md       ← Hardening de contenedores Docker
 ```
 
-Cuando el usuario pide algo relacionado con Beamer, opencode carga automáticamente la skill y sigue las instrucciones del `SKILL.md`.
+Cuando el usuario pide algo relacionado con despliegue Docker, opencode carga automáticamente la skill y sigue las instrucciones del `SKILL.md`.
 
 ### Subagentes
 
@@ -551,7 +551,7 @@ Agente:
 | **Agent** | Empleado autónomo | Toma decisiones y ejecuta acciones | opencode diagnosticando un contenedor que falla |
 | **Tool** | Herramienta del empleado | Función ejecutable que el agente invoca | `bash` para ejecutar `docker logs` |
 | **MCP** | enchufe USB-C | Protocolo estándar para conectar fuentes de datos | Servidor MCP de PostgreSQL conectado a Claude |
-| **Skill** | Manual de procedimiento | Instrucciones especializadas por dominio | Skill de Beamer que aplica branding OTI automáticamente |
+| **Skill** | Manual de procedimiento | Instrucciones especializadas por dominio | Skill que aplica buenas prácticas de despliegue automáticamente |
 | **Context window** | Memoria a corto plazo | Espacio total de tokens (entrada + salida) | 200K tokens en Claude 3.5 |
 | **Temperature** | Nivel de creatividad | Controla aleatoriedad de la respuesta | 0.0 para código, 0.7 para prosa |
 | **Prompt** | Orden del jefe | Instrucción que el usuario da al modelo | "Crea un Dockerfile de producción para Flask" |
@@ -571,4 +571,4 @@ Agente:
 
 ---
 
-*Universidad Nacional de Ingeniería — OTI-UNI SOC · Lima, Perú*
+*Conceptos de IA para Operaciones — Material educativo*
